@@ -84,3 +84,5 @@ Written as I built. Feeds the self-critique in the demo.
 - `/queue`'s `relativeTime` derives "yesterday" by subtracting 24h from the instant before taking
   the Denver day key — the same fall-back-Sunday edge as `denverInstant`, one hour per year.
   Fix is to subtract a calendar day from today's day key instead. Same review.
+- `calls.priority_result` is null for every call recorded before 2026-09-04 ~05:30 PDT: the webhook
+  stored only the tier. The detail page labels those rows "tier assigned, reason not stored".
