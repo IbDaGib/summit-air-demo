@@ -88,6 +88,22 @@ export async function listCalls(limit = 50): Promise<CallSummary[]> {
   return rows.map(toSummary);
 }
 
+/** Complete call window for the toaster; unlike the calls page, this must not cap rows. */
+export async function listCallsSince(since: string): Promise<CallSummary[]> {
+  if (!hasDbConfig()) {
+    const after = Date.parse(since);
+    return CALLS.filter((call) => Date.parse(call.startedAt) > after);
+  }
+  const rows = await query<CallRow>(
+    `select ${CALL_COLUMNS} from calls c
+     left join customers cu on cu.id = c.customer_id
+     where c.started_at > $1
+     order by c.started_at desc`,
+    [since],
+  );
+  return rows.map(toSummary);
+}
+
 export async function getCall(id: string): Promise<CallDetail | null> {
   if (!hasDbConfig()) return CALLS.find((c: CallDetail) => c.id === id) ?? null;
   const rows = await query<CallRow>(
