@@ -1,0 +1,406 @@
+<title>Summit Air Demo Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Roboto+Condensed:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+  :root {
+    --ground: #E9EDEF;
+    --surface: #FFFFFF;
+    --surface-2: #DFE5E8;
+    --ink: #12181B;
+    --ink-2: #33424A;
+    --muted: #5F707A;
+    --line: #C9D3D8;
+    --line-strong: #A8B6BD;
+    --accent: #0F4F6E;
+    --accent-soft: #DCE8EE;
+    --never: #9C2A1B;
+    --never-soft: #F4E1DD;
+    --scores: #2C6349;
+    --scores-soft: #DFEBE4;
+    --radius: 2px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0F1417;
+      --surface: #161D21;
+      --surface-2: #1E272C;
+      --ink: #E5EBEE;
+      --ink-2: #BDCAD1;
+      --muted: #8B9AA3;
+      --line: #283338;
+      --line-strong: #3A474E;
+      --accent: #6FB0D0;
+      --accent-soft: #16272F;
+      --never: #E07A66;
+      --never-soft: #2C1814;
+      --scores: #74C39B;
+      --scores-soft: #14251C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0F1417;
+    --surface: #161D21;
+    --surface-2: #1E272C;
+    --ink: #E5EBEE;
+    --ink-2: #BDCAD1;
+    --muted: #8B9AA3;
+    --line: #283338;
+    --line-strong: #3A474E;
+    --accent: #6FB0D0;
+    --accent-soft: #16272F;
+    --never: #E07A66;
+    --never-soft: #2C1814;
+    --scores: #74C39B;
+    --scores-soft: #14251C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet { max-width: 1060px; margin: 0 auto; padding: 36px 26px 90px; }
+
+  h1, h2, h3, .label, .tc, th, .chip, .pill {
+    font-family: "Roboto Condensed", "Helvetica Neue", Arial, sans-serif;
+  }
+  h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.08; margin: 0; text-wrap: balance; }
+  h2 { font-size: 21px; font-weight: 700; margin: 0; letter-spacing: 0.005em; }
+  h3 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: 0.02em; text-transform: uppercase; }
+  p { margin: 0; }
+
+  .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  code {
+    font-size: 0.84em; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 0.06em 0.34em; color: var(--ink);
+  }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header.mast {
+    border-bottom: 3px solid var(--ink); padding-bottom: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .mast-row { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: baseline; justify-content: space-between; }
+  .facts { display: flex; flex-wrap: wrap; gap: 16px 26px; }
+  .facts div { display: flex; flex-direction: column; gap: 1px; }
+  .facts .v { font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  section { margin-top: 42px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-strong); padding-bottom: 8px; margin-bottom: 20px;
+  }
+
+  /* time-coded spine — the session really is a sequence, so it gets numbers */
+  .run { display: flex; flex-direction: column; gap: 14px; }
+  .beat {
+    display: grid; grid-template-columns: 74px 1fr; gap: 16px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 16px;
+  }
+  .tc {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em; padding-top: 2px;
+  }
+  .beat .body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .beat p { color: var(--ink-2); }
+  .say {
+    font-style: italic; border-left: 2px solid var(--line-strong);
+    padding-left: 12px; color: var(--ink);
+  }
+  ul.tight { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; color: var(--ink-2); }
+  ul.tight li::marker { color: var(--muted); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  thead th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); background: var(--surface-2);
+    padding: 9px 13px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  tbody td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td strong, td b { color: var(--ink); }
+  .num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .chip {
+    display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: var(--radius); white-space: nowrap;
+  }
+  .c-never { color: var(--never); background: var(--never-soft); }
+  .c-scores { color: var(--scores); background: var(--scores-soft); }
+  .c-acc { color: var(--accent); background: var(--accent-soft); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 15px 16px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .card p, .card ul { font-size: 15px; color: var(--ink-2); }
+
+  .qa { display: flex; flex-direction: column; gap: 16px; }
+  .q {
+    background: var(--surface); border: 1px solid var(--line);
+    border-top: 2px solid var(--accent); border-radius: var(--radius); padding: 14px 16px;
+  }
+  .q .ask { font-family: "Roboto Condensed", sans-serif; font-weight: 700; font-size: 16.5px; color: var(--ink); }
+  .q .ans { margin-top: 6px; color: var(--ink-2); }
+
+  .warn {
+    background: var(--never-soft); border: 1px solid var(--never);
+    border-radius: var(--radius); padding: 14px 16px; color: var(--ink);
+  }
+  .own {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--never); border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 13px 15px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .own .t { font-family: "Roboto Condensed", sans-serif; font-weight: 700; color: var(--ink); font-size: 16px; }
+  .own p { font-size: 15px; color: var(--ink-2); }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+
+  footer {
+    margin-top: 46px; padding-top: 16px; border-top: 1px solid var(--line-strong);
+    font-size: 14px; color: var(--muted);
+  }
+
+  @media (max-width: 620px) {
+    .sheet { padding: 24px 16px 70px; }
+    h1 { font-size: 27px; }
+    .beat { grid-template-columns: 1fr; gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="mast-row">
+      <div class="label">Revin FDE case study · live session runbook</div>
+      <div class="facts">
+        <div><span class="label">Number</span><span class="v">+1 603 441 7065</span></div>
+        <div><span class="label">Session</span><span class="v">30 min · Rachna Lewis</span></div>
+      </div>
+    </div>
+    <h1>Summit Air demo runbook</h1>
+    <p style="max-width:70ch;color:var(--ink-2)">You lead the call, then rate it, then explain the architecture, then debug something live. Four deliverables, not one. The build is done — this is the part that gets scored.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>Before you dial in</h2><span class="label">ten minutes, do it now</span></div>
+    <div class="cards">
+      <div class="card">
+        <h3>Tabs, in this order</h3>
+        <ul class="tight">
+          <li><code>/overview?key=…</code> — the stakeholder page. Share this one first.</li>
+          <li><code>/calls</code> — leave it open; her call appears here in ~3 seconds.</li>
+          <li><code>/queue</code> and <code>/schedule</code> — one click away.</li>
+          <li>Vercel function logs, for the debug segment.</li>
+          <li>The repo. It is public: <code>github.com/IbDaGib/summit-air-demo</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>One warm-up call</h3>
+        <p>Book a routine job in Bozeman. You are checking three things that changed this morning: the outcome now records, the agent says goodbye <strong>once</strong>, and the line actually drops.</p>
+        <p>If the outcome column on <code>/calls</code> says <em>Booked</em> and not <em>no outcome</em>, the fix took.</p>
+      </div>
+      <div class="card">
+        <h3>Say this in the first minute</h3>
+        <p class="say">"Forty techs, three counties, and the phones don't stop when the first cold snap hits. This answers every one of them, works out how urgent it is, and books the truck. I'd like you to try to break it — go off script, that's the interesting part."</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>The thirty minutes</h2><span class="label">time-coded; the session is a sequence</span></div>
+    <div class="run">
+
+      <div class="beat">
+        <span class="tc">00:00</span>
+        <div class="body">
+          <h3>Frame it, then hand her the phone</h3>
+          <p>Do not tour the code first. The number ringing is the proof; everything else is commentary on it.</p>
+          <p class="say">"Two outcomes only: a booked appointment, or a safe escalation. Anything else is a failed call. Try whichever you like — I'd start with a normal repair, then try to scare it."</p>
+        </div>
+      </div>
+
+      <div class="beat">
+        <span class="tc">02:00</span>
+        <div class="body">
+          <h3>Call one — the ordinary job <span class="chip c-acc">the product</span></h3>
+          <p>Furnace not keeping up, Bozeman, give a street address, take a window. While it runs, narrate <em>underneath</em> the call, not over it.</p>
+          <ul class="tight">
+            <li>It asks the town second — service area is a table lookup, never a guess.</li>
+            <li>"Is this your house, and is anyone there I should flag?" — one question doing two jobs.</li>
+            <li>It reads the address back before booking. A wrong address sends a truck to a stranger.</li>
+            <li>Two windows offered. Never a list of six.</li>
+          </ul>
+          <p>Then switch to <code>/calls</code> and let the row land while she watches.</p>
+        </div>
+      </div>
+
+      <div class="beat">
+        <span class="tc">07:00</span>
+        <div class="body">
+          <h3>Call two — the gas smell <span class="chip c-never">must not book</span></h3>
+          <p>Ask her to say: <em>"My furnace won't turn on and I smell gas."</em> Expect escalation on the first turn, evacuation instructions, a callback number, no appointment.</p>
+          <p>Then ask her to try the version that actually broke it once: <em>"No heat, and there's a gas smell in the basement."</em> That sentence silently failed to escalate at 2am. It has three regression tests on it now.</p>
+        </div>
+      </div>
+
+      <div class="beat">
+        <span class="tc">11:00</span>
+        <div class="body">
+          <h3>Rate the call, out loud, before she does <span class="chip c-scores">highest-scoring move</span></h3>
+          <p>Use the scorecard below. Volunteer the two weaknesses she is most likely to have noticed — the filler phrases and the digits — before she raises them. Being first to name your own defect is worth more than the defect costs.</p>
+        </div>
+      </div>
+
+      <div class="beat">
+        <span class="tc">15:00</span>
+        <div class="body">
+          <h3>Architecture — lead with the one decision that carries it</h3>
+          <p class="say">"Nothing in <code>agent/</code> imports Vapi. That's why the eval harness drives the same prompt and the same tool handlers the phone does, and why swapping the model was one environment variable."</p>
+          <p>Then the two that answer the questions she will actually ask, both below.</p>
+        </div>
+      </div>
+
+      <div class="beat">
+        <span class="tc">25:00</span>
+        <div class="body">
+          <h3>Debug something live</h3>
+          <p>Open the tool trace on the call you just made: <code>/calls/[id]</code> → Tool trace. Every call with arguments, result, milliseconds, and whether the safety backstop forced it. Read the failure out of the trace, not out of a guess.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Self-critique scorecard</h2><span class="label">rate it 1–5 and say why</span></div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Dimension</th><th>What "good" is</th><th>Honest read</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Safety</strong></td>
+            <td>Hazard escalates on the first turn, never books</td>
+            <td><strong>5</strong> — verified on real calls, including the phrasing that once failed silently. Backed by a deterministic keyword scan, so it does not depend on the model obeying.</td>
+          </tr>
+          <tr>
+            <td><strong>Triage correctness</strong></td>
+            <td>Right tier, right reason, re-tiers on new facts</td>
+            <td><strong>5</strong> — a real call went P2, then P1 the moment a vulnerable occupant came up, with "on-call technician is paged now". The tier is a pure function, not model output.</td>
+          </tr>
+          <tr>
+            <td><strong>Task completion</strong></td>
+            <td>Books, or declines honestly</td>
+            <td><strong>4</strong> — books against real capacity; refused to book without an address and logged a callback instead. Correct, and it cost a turn.</td>
+          </tr>
+          <tr>
+            <td><strong>Conversation quality</strong></td>
+            <td>Sounds like a good dispatcher</td>
+            <td><strong>3</strong> — the questions are genuinely good. But eight filler phrases in one call, and it said "3 Forks" and "Innis". That is the weakest dimension and I would fix it first.</td>
+          </tr>
+          <tr>
+            <td><strong>Recovery</strong></td>
+            <td>Handles the unexpected without lying</td>
+            <td><strong>4</strong> — an out-of-area caller who then gave a real town got recovered mid-call. It has never claimed an appointment it did not have.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="stack" style="margin-top:18px">
+      <div class="own">
+        <span class="t">Filler phrases — the one I would fix first</span>
+        <p>The prompt says at most one per call. A real call used eight: "hold on a sec", "give me a moment", "this'll just take a sec". The rule is in the deployed prompt and the model ignores it. That is the honest finding: <strong>prompt instruction alone did not hold this.</strong> The fix is not more prompt — it is a post-processing guard that strips a second filler, or a model that follows it.</p>
+      </div>
+      <div class="own">
+        <span class="t">A tool was deployed but never committed</span>
+        <p>I renamed the outcome tool so the model would stop confusing it with the hang-up function. The rename reached the live assistant and only half of it reached a commit, so for two hours the agent called a tool the webhook did not know, and outcomes silently stopped recording. Found it in a trace this morning and closed it. It is exactly the two-sources-of-truth failure I had already written into the README as a lesson — which is why the repo now deploys the assistant by script.</p>
+      </div>
+      <div class="own">
+        <span class="t">The eval suite has never run against the real model</span>
+        <p>Five scenarios, hard assertions gating and an LLM judge trending, and it runs green — offline, against a deterministic stand-in. That proves the harness, not the prompt. Everything I actually know about this agent's behaviour came from about a dozen phone calls, and those calls found five real bugs. I would rather say that than imply eval coverage I do not have.</p>
+      </div>
+      <div class="own">
+        <span class="t">Half the prompt design is inert</span>
+        <p>Vapi's native model config owns the message array, so the per-turn context layer — local time, outdoor temperature, the still-needed field list — never reaches the model. Caller identity rides in a tool result instead. Closing that needs the custom LLM endpoint I deferred on day one as unbounded risk. Deferring it was right; not noticing it was dead code for a while was not.</p>
+      </div>
+      <div class="own">
+        <span class="t">No weather source</span>
+        <p>The freezing-pipes branch of the priority rules cannot fire on a live call, because nothing supplies the outdoor temperature. A no-heat call with nobody vulnerable tiers P2 at any temperature. The rule is written and tested; the input is missing.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>The questions she will ask</h2><span class="label">answer in one breath, then stop</span></div>
+    <div class="qa">
+      <div class="q">
+        <div class="ask">How do you know it won't miss an emergency?</div>
+        <div class="ans">Two independent layers. The model only reports facts; a pure function decides the tier, and it has tests. Underneath that, a deterministic keyword scan runs on every caller turn and forces escalation regardless of what the model decided — so the one thing that must never fail does not depend on instruction-following. That scan was wrong once: <em>"No heat, and there's a gas smell in the basement"</em> read "no" as negating the hazard, so it stayed silent on the exact sentence it exists for. Three regression tests now.</div>
+      </div>
+      <div class="q">
+        <div class="ask">What stops two calls taking the same slot?</div>
+        <div class="ans">Postgres. <code>EXCLUDE USING gist (tech_id WITH =, arrival_window WITH &amp;&amp;)</code> — a double-booking is rejected by the database, not guarded against in application code. There is a runnable SQL proof in <code>db/checks/</code> with four cases, including back-to-back windows, so a pass cannot be explained by the constraint rejecting everything. The handler turns <code>23P01</code> into an apology and two alternatives rather than a 500 into the call.</div>
+      </div>
+      <div class="q">
+        <div class="ask">Why this model?</div>
+        <div class="ans">Measured call quality, not a datasheet. Mistral Medium read its own tool call aloud on a live call — the caller heard "Tool calls. ID, four h two y y nine b j" and hung up. The current model handled the same intake cleanly. The core is provider-neutral, so that swap was one environment variable, and Mistral stays the documented alternative and the self-hosting path.</div>
+      </div>
+      <div class="q">
+        <div class="ask">What does it cost?</div>
+        <div class="ans">About ten cents a call, seven and a half cents a minute, measured on real calls. The interesting part is the split: the language model is roughly fifteen percent. Platform and telephony are seventy. So if you asked me to cut the bill I would change the voice provider, not the model. And the case isn't labour substitution — a missed call in the first cold snap is a lost service ticket or an install lead, which is what the ROI page lets you price with your own numbers.</div>
+      </div>
+      <div class="q">
+        <div class="ask">How would we change the dispatch rules ourselves?</div>
+        <div class="ans">Everything a business would want to change is data or a pure function, not prose in a prompt: the service area is a table, the priority rules are one file with tests, after-hours behaviour is a function. The repo is the source of truth and a script deploys the assistant, so "what changed about the agent" is answerable with <code>git log</code>. The only things in the vendor dashboard are a credential and one dropdown.</div>
+      </div>
+      <div class="q">
+        <div class="ask">How did you build this in a day?</div>
+        <div class="ans">Contract first, then parallel. I wrote the tool schemas and the data contract myself, then ran four agents in isolated worktrees against them, each with a brief naming the files it owned and the files it must not touch. Every branch went through a spec-compliance review and a quality review before merge, and the review bot enforces the architecture invariants — an agent that imports the vendor SDK into the core, or reads the priority tier off a model response, gets blocked at review. Two of the five real bugs were found by those reviews, not by me.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>If something breaks live</h2><span class="label">look here, in this order</span></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Symptom</th><th>Look at</th><th>Likely cause</th></tr></thead>
+        <tbody>
+          <tr><td>Agent goes silent after "let me pull up the schedule"</td><td><code>/calls/[id]</code> → Tool trace</td><td>A tool returned an error, or the result reached the model unusable. The trace shows the exact result.</td></tr>
+          <tr><td>Greets a stranger by someone else's name</td><td>Trace → <code>lookup_customer</code> args</td><td>Caller identity must come from the carrier, never the model. This leaked once when the model passed <code>"unknown"</code>.</td></tr>
+          <tr><td>Says goodbye repeatedly, line stays open</td><td>Trace → outcome tool</td><td>The recording tool is not the hang-up tool. Two steps, once each.</td></tr>
+          <tr><td>Call drops in ten seconds</td><td>Vapi call record → <code>endedReason</code></td><td><code>pipeline-error-…-llm-failed</code> means the provider rejected it — tier, billing, or a bad model name. Not your code.</td></tr>
+          <tr><td>Dashboard shows an error card</td><td>The reference id on the card</td><td>Database unreachable. It says so rather than rendering zeros, and the phone agent is unaffected.</td></tr>
+          <tr><td>Outcome column says "no outcome"</td><td>Trace → the outcome tool result</td><td>Fixed at 10:30 today. If it recurs, the deployed tool name and the handler registry disagree.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px;max-width:74ch;color:var(--ink-2)">The trace is the first stop for everything. It exists because a silent failure on a phone call is invisible otherwise — you cannot see a tool that did not fire.</p>
+  </section>
+
+  <footer>
+    <strong>Two things not to do.</strong> Do not open with the architecture; the number ringing is the argument. Do not defend the filler phrases or the eval gap — naming them first is worth more than either costs. <span style="color:var(--ink-2)">Everything deferred, with reasoning, is in <code>KNOWN_ISSUES.md</code>.</span>
+  </footer>
+
+</div>
