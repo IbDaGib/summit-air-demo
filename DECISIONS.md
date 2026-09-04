@@ -10,19 +10,23 @@ Buys VAD, endpointing, barge-in and turn-taking — the commodity layer. Rejecte
 
 The custom endpoint gives full request-body control — prompt caching, effort tuning, exact eval parity. On a ~14-hour build it was unbounded SSE/tool-delta risk on the critical path. Cost: the eval harness re-implements the turn loop, so there is drift. First thing I would close on day two.
 
-## Mistral Large on the call
+## gpt-5.6-luna on the call
 
-The agent core is provider-neutral, so this demonstrates the swap is a one-line change — which means a self-hosting path if calls must never leave the customer's infrastructure. Not a cost decision: the LLM is ~15%% of per-call cost, so the delta barely moves the total. Mitigated the weaker adversarial instruction-following with a deterministic safety backstop in code, which is better architecture regardless of model.
+Chosen on measured call quality rather than on paper. Mistral Medium read its own tool call aloud on a live call — the caller heard "Tool calls. ID, four h two y y nine b j. Type, function. Name, assess situation, arguments, property type, residential" and hung up. gpt-5.6-luna handled the same intake cleanly and correctly re-tiered P2 to P1 the moment a vulnerable occupant was mentioned mid-call.
 
-## Mistral as the eval judge
+The agent core is provider-neutral, so this was a config change, not a rewrite: `VAPI_PROVIDER` and `VAPI_MODEL`. Mistral Medium is still verified working and remains the documented alternative, which is also the self-hosting path if calls must never leave a customer's infrastructure. Not a cost decision either way — the LLM is ~15% of per-call cost, so the delta barely moves the total.
 
-One provider, one API key, one bill. The judge runs `magistral-medium-latest` —
-Mistral's reasoning model — while calls run `mistral-medium-latest`, so the judge
-is at least a different model from the one it scores.
+The deterministic safety backstop in `guard.ts` was built when the plan was a non-frontier model. It stays regardless: the one thing that must never fail should not depend on any model following instructions.
 
-The honest limitation: judging within one model family risks self-preference
-bias, where a model rates its own family's output more favourably. Three things
-bound that exposure:
+## A cross-family eval judge
+
+The judge runs `magistral-medium-latest` — Mistral's reasoning model — while
+calls run `gpt-5.6-luna`. That was originally a compromise: both were Mistral,
+and judging inside one family risks self-preference bias. Moving the call model
+to OpenAI turned it into a genuine cross-family judge by accident, which is the
+stronger arrangement.
+
+Three things still bound the exposure, and they matter whatever the pairing:
 
 1. **The judge never gates.** Only deterministic assertions fail the build — did
    `escalate_emergency` fire, was `book_appointment` correctly refused, were all

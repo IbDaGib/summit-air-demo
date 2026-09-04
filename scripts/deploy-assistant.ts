@@ -39,18 +39,19 @@ const assistant = {
     "Hi there — thanks for calling Summit Air, this is Casey. Quick heads up, I'm an AI assistant and this call is recorded. What's the system doing, or not doing?",
 
   model: {
-    provider: "mistral",
-    // Overridable so the tier/latency tradeoff is one env var, not a code edit.
-    // mistral-large-latest is NOT available on all Mistral subscription tiers —
-    // it returns 403 tier_not_allowed, which Vapi surfaces only as the opaque
-    // "pipeline-error-mistral-llm-failed". Verified working: small, medium.
-    model: process.env.VAPI_MODEL ?? "mistral-medium-latest",
-    // Lowered from 0.4 after the model emitted its tool call as spoken text on
-    // a live call ("Tool calls. ID, four h two y y nine b j. Type, function...").
-    // A prompt rule forbids it, but that is an instruction the model can ignore,
-    // so this reduces the sampling that produced it. If it recurs, the next
-    // levers are mistral-small-latest or magistral-medium-latest.
-    temperature: 0.2,
+    // Chosen on measured call quality, not on paper. Mistral Medium read its own
+    // tool call aloud on a live call ("Tool calls. ID, four h two y y nine b j.
+    // Type, function...") and the caller hung up. gpt-5.6-luna handled the same
+    // intake cleanly and re-tiered P2 to P1 correctly when a vulnerable occupant
+    // was revealed mid-call.
+    //
+    // Provider and model are env-overridable so swapping is a config change, not
+    // a code edit — the point of keeping the agent core transport-agnostic.
+    // Mistral Medium remains a verified alternative; note that
+    // mistral-large-latest returns 403 tier_not_allowed on lower tiers, which
+    // Vapi surfaces only as the opaque "pipeline-error-mistral-llm-failed".
+    provider: process.env.VAPI_PROVIDER ?? "openai",
+    model: process.env.VAPI_MODEL ?? "gpt-5.6-luna",
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
     tools: TOOL_LIST.map((t) => ({
@@ -64,14 +65,24 @@ const assistant = {
     })),
   },
 
-  transcriber: { provider: "deepgram", model: "nova-2", language: "en-US" },
+  // nova-3 with a confidence floor: below 0.4 the transcript is guesswork, and
+  // a misheard street address sends a truck to a stranger's house.
+  transcriber: {
+    provider: "deepgram",
+    model: "nova-3",
+    language: "en",
+    profanityFilter: true,
+    confidenceThreshold: 0.4,
+  },
 
-  voice: { provider: "11labs", voiceId: "sarah", model: "eleven_flash_v2_5" },
+  voice: { provider: "vapi", voiceId: "Savannah", language: "en", version: "2" },
 
   // Endpointing is the real latency lever on a voice call — far more than model
   // choice. Too high and the agent feels slow; too low and it interrupts people
   // mid-sentence while they think about their address.
-  startSpeakingPlan: { waitSeconds: 0.4 },
+  // smartEndpointingPlan is the single biggest turn-taking lever — it decides
+  // when the caller has actually finished rather than just paused to think.
+  startSpeakingPlan: { waitSeconds: 0.4, smartEndpointingPlan: { provider: "vapi" } },
   silenceTimeoutSeconds: 20,
   maxDurationSeconds: 420,
 

@@ -26,7 +26,7 @@ flowchart TB
     Caller([caller]) -->|PSTN| Vapi[Vapi<br/>telephony · STT · TTS · VAD · barge-in]
     Vapi -->|tool calls| Tools["/api/vapi/tools"]
     Vapi -->|end-of-call-report| Events["/api/vapi/events"]
-    Vapi <-->|inference| Mistral[mistral-medium-latest]
+    Vapi <-->|inference| LLM[openai · gpt-5.6-luna]
 
     Tools --> Guard[guard.ts<br/>deterministic hazard scan]
     Tools --> State[callState.ts<br/>caller ID · escalation lock]
@@ -102,6 +102,15 @@ assembled prompt rather than buried under conversational instructions.
 
 Two deliberate choices:
 
+**The repo is the source of truth, and drift is the failure mode.** `scripts/deploy-assistant.ts`
+pushes the prompt, all eight tool schemas, the model, the voice, the transcriber, endpointing and
+`serverMessages`. Iterating on wording in the Vapi dashboard is fine and fast — but port it back
+and redeploy before doing anything else. Three times during this build a dashboard edit created a
+problem: one cleared `serverMessages` and left the tool URLs pointing at a laptop tunnel, one
+pasted authoring notes into `firstMessage` so the caller heard "Seasonal variants, swap the last
+line if you want a warmer open" read aloud, and one silently reverted the prompt and dropped the
+rule that stops the model speaking its own tool calls.
+
 **Static prompt deploys to Vapi; per-turn state is meant to be appended by the runtime** —
 local time, outdoor temperature, known-customer record, and the still-needed field list, so
 the model never has to remember what it already collected. See
@@ -119,8 +128,8 @@ outdoor temperature. This demo runs in September and the canonical scenario is J
 |---|---|---|---|
 | Voice pipeline | **Vapi** | Buys VAD, endpointing, barge-in, turn-taking — the commodity layer | LiveKit/Pipecat + Twilio SIP: better control, 2–3 days owning interruption handling |
 | Agent config | **Vapi native model config** | Prompt and tools live in the repo, pushed by `scripts/deploy-assistant.ts` | Custom LLM endpoint: full request-body control, but unbounded SSE risk on a one-day build |
-| Call model | **`mistral-medium-latest`** | Verified tier-available and tool-calling correct on the safety cases | `mistral-large-latest` returns 403 `tier_not_allowed` |
-| Offline model | **`magistral-medium-latest`** | Reasoning model for extraction and the eval judge | Same model as the caller — a judge shouldn't be the model it scores |
+| Call model | **`openai / gpt-5.6-luna`** | Chosen on measured call quality. Mistral Medium read its own tool call aloud on a live call and the caller hung up | `mistral-medium-latest` — verified working and still a one-env-var swap; `mistral-large-latest` returns 403 `tier_not_allowed` on lower tiers |
+| Offline model | **`magistral-medium-latest`** (Mistral) | Extraction and the eval judge. Now a genuinely **cross-family** judge, since the call runs on OpenAI — a judge should not be the family it scores | Judging with the calling model, which invites self-preference bias |
 | Data | **Neon Postgres** | Transactions, `btree_gist`, exclusion constraints | Supabase — outaged mid-build; the migration moved unchanged |
 | Scheduling | **`EXCLUDE USING gist`** | The database refuses double-booking | Google Calendar OAuth; app-level checks that race |
 | Evals | **Vitest + simulated caller + LLM judge** | Same repo, no vendor account, runs in CI | Promptfoo, Braintrust — config and accounts to learn |
@@ -161,7 +170,7 @@ Measured on real calls, not estimated:
 | Component | Per 4-minute call |
 |---|---|
 | Vapi platform + STT + TTS + telephony | ~$0.33 |
-| `mistral-medium-latest` (1,303 prompt tokens/turn) | ~$0.05 |
+| `gpt-5.6-luna` (~2,900 prompt tokens/turn) | ~$0.05 |
 | Post-call extraction (~400 in / 70 out) | ~$0.01 |
 | **Total** | **~$0.38** |
 
