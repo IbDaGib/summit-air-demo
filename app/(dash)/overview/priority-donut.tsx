@@ -91,14 +91,14 @@ export function PriorityDonut({ mix }: { mix: PriorityMix }) {
       <ul className="w-full space-y-2 text-xs">
         {TIERS.map((p) => (
           <li key={p} className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${RAMP[p].dot}`} />
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${RAMP[p].dot}`} aria-hidden />
             <span className="w-6 font-mono font-semibold">{p}</span>
             <span className="text-muted-foreground">{RAMP[p].label}</span>
             <span className="ml-auto pl-3 tabular-nums">{mix[p].toLocaleString("en-US")}</span>
           </li>
         ))}
         <li className="flex items-center gap-2 border-t pt-2">
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${ramp(null).dot}`} />
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${ramp(null).dot}`} aria-hidden />
           <span className="w-6 font-mono font-semibold text-muted-foreground">—</span>
           <span className="text-muted-foreground">Untiered · ended before assessment</span>
           <span className="ml-auto pl-3 tabular-nums text-muted-foreground">
