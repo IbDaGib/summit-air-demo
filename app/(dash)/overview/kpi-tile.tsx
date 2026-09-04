@@ -108,12 +108,16 @@ export function KpiTiles({
           cost.calls === 0 ? NO_CALLS : `${usd(cost.totalUsd)} across ${plural(cost.calls, "call")}`
         }
       />
+      {/* costPerBookingUsd is null with no bookings, and also when every booked
+          call still has cost_usd NULL — Vapi reports cost after the call ends. */}
       <KpiTile
         label="Cost per booking"
         value={cost.costPerBookingUsd === null ? "—" : usd(cost.costPerBookingUsd)}
         footnote={
           cost.costPerBookingUsd === null
-            ? "no bookings yet"
+            ? volume.booked === 0
+              ? "no bookings yet"
+              : "cost not yet reported"
             : `across ${plural(volume.booked, "booking")}`
         }
       />
