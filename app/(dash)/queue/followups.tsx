@@ -8,7 +8,7 @@ import type { Priority } from "../_data/types";
 import { PriorityChip, ramp } from "../_ui/priority";
 import { Table, TableBody, TableCell, TableHeader } from "@/components/ui/table";
 import { formatPhone, present } from "./_format";
-import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
+import { Dash, Empty, HeadRow, Panel, STICKY_ON_MOBILE, Th, When } from "./cells";
 import { ResolvableRow } from "./resolve-toggle";
 
 const TIERS: ReadonlySet<string> = new Set<Priority>(["P0", "P1", "P2", "P3"]);
@@ -64,7 +64,7 @@ export function Followups({
             <Th className="w-px">Priority</Th>
             <Th>Reason</Th>
             <Th>Summary</Th>
-            <Th className="w-px pr-3">
+            <Th className={`w-px pr-3 ${STICKY_ON_MOBILE}`}>
               <span className="sr-only">Resolve</span>
             </Th>
           </HeadRow>

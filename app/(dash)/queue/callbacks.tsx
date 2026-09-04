@@ -10,7 +10,7 @@ import type { CallbackItem } from "../_data/metrics";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader } from "@/components/ui/table";
 import { formatPhone, present } from "./_format";
-import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
+import { Dash, Empty, HeadRow, Panel, STICKY_ON_MOBILE, Th, When } from "./cells";
 import { ResolvableRow } from "./resolve-toggle";
 
 export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) {
@@ -33,7 +33,7 @@ export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) 
             <Th>Reason</Th>
             <Th>Notes</Th>
             <Th className="w-px">Status</Th>
-            <Th className="w-px pr-3">
+            <Th className={`w-px pr-3 ${STICKY_ON_MOBILE}`}>
               <span className="sr-only">Resolve</span>
             </Th>
           </HeadRow>

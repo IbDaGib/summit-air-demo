@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { resolveCallback, resolveFollowup, type ResolveResult } from "./actions";
+import { STICKY_ON_MOBILE } from "./cells";
 
 type Kind = "followup" | "callback";
 
@@ -75,8 +76,14 @@ export function ResolvableRow({
       )}
     >
       {children}
-      {/* Its own cell, outside any row link, so a tap here never navigates. */}
-      <TableCell className="w-px pr-3 text-right">
+      {/*
+        Its own cell, outside any row link, so a tap here never navigates.
+        Below md the table scrolls sideways and this column would be a swipe
+        away on every row, so it is pinned to the right edge there — opaque,
+        with a hairline, so scrolled cells pass beneath it cleanly. Desktop is
+        left alone: the table fits, and an opaque cell would mask the row hover.
+      */}
+      <TableCell className={cn("w-px pr-3 text-right", STICKY_ON_MOBILE)}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
