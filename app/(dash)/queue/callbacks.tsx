@@ -8,9 +8,10 @@
 import { PhoneOff } from "lucide-react";
 import type { CallbackItem } from "../_data/metrics";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader } from "@/components/ui/table";
 import { formatPhone, present } from "./_format";
 import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
+import { ResolvableRow } from "./resolve-toggle";
 
 export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) {
   if (items.length === 0) {
@@ -31,34 +32,50 @@ export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) 
             <Th>Phone</Th>
             <Th>Reason</Th>
             <Th>Notes</Th>
-            <Th className="w-px pr-4">Status</Th>
+            <Th className="w-px">Status</Th>
+            <Th className="w-px pr-3">
+              <span className="sr-only">Resolve</span>
+            </Th>
           </HeadRow>
         </TableHeader>
         <TableBody>
           {items.map((c) => (
             // Resolved rows stay for the record but recede; open ones are the work.
-            <TableRow key={c.id} className={c.resolved ? "text-muted-foreground" : undefined}>
+            <ResolvableRow key={c.id} kind="callback" id={c.id} resolved={c.resolved}>
               <TableCell className="pl-4 text-muted-foreground">
                 <When iso={c.createdAt} now={now} />
               </TableCell>
               <TableCell className="font-medium">
-                {present(c.customerName) ? c.customerName : <span className="font-normal text-muted-foreground italic">unknown</span>}
+                {present(c.customerName) ? (
+                  c.customerName
+                ) : (
+                  <span className="font-normal text-muted-foreground italic">unknown</span>
+                )}
               </TableCell>
               <TableCell>
                 <PhoneCell phone={c.phone} />
               </TableCell>
-              <TableCell className="max-w-[32ch] whitespace-normal">{present(c.reason) ? c.reason : <Dash />}</TableCell>
+              <TableCell className="max-w-[32ch] whitespace-normal">
+                {present(c.reason) ? (
+                  // The reason is the thing to do; when it is done, it reads as done.
+                  <span className="group-data-[resolved=true]:line-through">{c.reason}</span>
+                ) : (
+                  <Dash />
+                )}
+              </TableCell>
               <TableCell className="max-w-[40ch] whitespace-normal text-muted-foreground">
                 {present(c.notes) ? <span className="line-clamp-2">{c.notes}</span> : <Dash />}
               </TableCell>
-              <TableCell className="pr-4">
-                {c.resolved ? (
-                  <Badge variant="secondary">resolved</Badge>
-                ) : (
-                  <Badge variant="outline">open</Badge>
-                )}
+              <TableCell>
+                {/* Follows the optimistic row state, not the prop, so it flips with the row. */}
+                <Badge variant="outline" className="group-data-[resolved=true]:hidden">
+                  open
+                </Badge>
+                <Badge variant="secondary" className="hidden group-data-[resolved=true]:inline-flex">
+                  resolved
+                </Badge>
               </TableCell>
-            </TableRow>
+            </ResolvableRow>
           ))}
         </TableBody>
       </Table>
