@@ -1,3 +1,15 @@
+import { cn } from "cn";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { listBookings, listTechs } from "../_data/client";
 import type { Booking, Tech } from "../_data/types";
 import { ramp, RampLegend } from "../_ui/priority";
@@ -38,64 +50,81 @@ export default async function SchedulePage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-4 pb-3">
-        <h1 className="text-sm font-semibold tracking-tight text-zinc-200">Schedule</h1>
-        <span className="text-xs text-zinc-500">
+    <div className="flex flex-1 flex-col gap-4 p-6">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 className="text-base font-semibold tracking-tight">Schedule</h1>
+        <span className="text-sm text-muted-foreground tabular-nums">
           Next {DAYS} days · {techs.length} technicians · all times America/Denver
         </span>
-        <span className="ml-auto text-xs text-zinc-600">
-          {bookings.length} booked windows. A technician cannot hold two overlapping
-          windows — Postgres rejects it.
+        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+          {bookings.length} booked windows. A technician cannot hold two overlapping windows —
+          Postgres rejects it.
         </span>
       </div>
 
-      <div className="overflow-x-auto px-5 pb-4">
-        <table className="w-full min-w-[64rem] border-separate border-spacing-0 text-sm">
-          <thead>
-            <tr>
-              <th className="sticky left-0 z-10 w-40 border-b border-zinc-800 bg-zinc-950 px-3 pb-2 text-left text-[11px] font-medium tracking-wide text-zinc-500 uppercase">
+      <Card className="gap-0 overflow-hidden py-0">
+        <Table className="min-w-[64rem]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent [&_th]:h-8 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:tracking-wide [&_th]:uppercase">
+              <TableHead className="sticky left-0 z-10 w-40 bg-card pl-4 text-muted-foreground">
                 Tech
-              </th>
-              {days.map((d, i) => (
-                <th
-                  key={dayKeys[i]}
-                  className={`border-b border-l border-zinc-800 px-3 pb-2 text-left text-[11px] font-medium tracking-wide uppercase ${
-                    dayKeys[i] === todayKey ? "text-sky-300" : "text-zinc-500"
-                  }`}
-                >
-                  {denverWeekday(d.toISOString())}
-                  <span className="ml-1.5 font-normal text-zinc-600">
-                    {denverMonthDay(d.toISOString())}
-                  </span>
-                  {dayKeys[i] === todayKey ? (
-                    <span className="ml-1.5 font-normal text-sky-400/80">today</span>
-                  ) : null}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+              {days.map((d, i) => {
+                const today = dayKeys[i] === todayKey;
+                return (
+                  <TableHead
+                    key={dayKeys[i]}
+                    className={cn("border-l", today ? "text-foreground" : "text-muted-foreground")}
+                  >
+                    {denverWeekday(d.toISOString())}
+                    <span className="ml-1.5 font-normal text-muted-foreground/70">
+                      {denverMonthDay(d.toISOString())}
+                    </span>
+                    {today ? (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 h-4 px-1.5 text-[10px] font-medium tracking-normal normal-case"
+                      >
+                        today
+                      </Badge>
+                    ) : null}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          </TableHeader>
+          <TableBody className="[&_td]:align-top">
             {techs.map((tech) => (
-              <tr key={tech.id} className="align-top">
+              <TableRow key={tech.id} className="hover:bg-transparent">
                 <TechCell tech={tech} />
                 {dayKeys.map((key) => (
-                  <td
+                  <TableCell
                     key={key}
-                    className={`border-b border-l border-zinc-900 p-1.5 ${
-                      key === todayKey ? "bg-sky-500/[0.03]" : ""
-                    }`}
+                    className={cn(
+                      "border-l p-1.5 whitespace-normal",
+                      key === todayKey && "bg-muted/25",
+                    )}
                   >
                     <DayCell bookings={byTechDay.get(tech.id)?.get(key) ?? []} />
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+            {techs.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={DAYS + 1}
+                  className="py-16 text-center text-sm whitespace-normal text-muted-foreground"
+                >
+                  No technicians on the roster, so there is nothing to schedule against.
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+      </Card>
 
-      <div className="mt-auto border-t border-zinc-900 px-5 py-3">
+      <div className="mt-auto border-t pt-3">
         <RampLegend />
       </div>
     </div>
@@ -104,25 +133,25 @@ export default async function SchedulePage() {
 
 function TechCell({ tech }: { tech: Tech }) {
   return (
-    <td className="sticky left-0 z-10 border-b border-zinc-900 bg-zinc-950 px-3 py-2 whitespace-nowrap">
+    <TableCell className="sticky left-0 z-10 bg-card py-2 pl-4 whitespace-nowrap">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-zinc-200">{tech.name}</span>
+        <span className="text-sm">{tech.name}</span>
         {tech.onCall ? (
-          <span className="rounded bg-amber-400/15 px-1.5 text-[10px] font-medium text-amber-200 ring-1 ring-inset ring-amber-400/40">
+          <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
             on call
-          </span>
+          </Badge>
         ) : null}
       </div>
-      <div className="mt-0.5 text-[11px] text-zinc-600">
+      <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
         {tech.homeCounty} · {tech.shiftStart}–{tech.shiftEnd}
       </div>
-    </td>
+    </TableCell>
   );
 }
 
 function DayCell({ bookings }: { bookings: Booking[] }) {
   if (bookings.length === 0) {
-    return <div className="px-1.5 py-2 text-[11px] text-zinc-700">open</div>;
+    return <div className="px-1.5 py-2 text-[11px] text-muted-foreground/50">open</div>;
   }
   return (
     <div className="flex flex-col gap-1">
@@ -133,22 +162,46 @@ function DayCell({ bookings }: { bookings: Booking[] }) {
   );
 }
 
+/**
+ * One arrival window. The block carries what fits — window, tier, name, town —
+ * and the tooltip carries the rest: who it is and what they reported, which is
+ * what a dispatcher wants before calling the tech.
+ */
 function BookingBlock({ booking }: { booking: Booking }) {
   const r = ramp(booking.priority);
   return (
-    <div
-      className={`relative overflow-hidden rounded border py-1 pr-2 pl-2.5 ${r.panel}`}
-      title={booking.issueSummary}
-    >
-      <span className={`absolute inset-y-0 left-0 w-[3px] ${r.rail}`} aria-hidden />
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono text-[11px] font-semibold tabular-nums text-zinc-100">
-          {arrivalWindow(booking.startsAt, booking.endsAt)}
-        </span>
-        <span className="font-mono text-[10px] text-zinc-500">{booking.priority}</span>
-      </div>
-      <div className="truncate text-[11px] text-zinc-300">{booking.customerName}</div>
-      <div className="truncate text-[11px] text-zinc-500">{booking.town}</div>
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          tabIndex={0}
+          className={cn(
+            "relative cursor-default overflow-hidden rounded-md border py-1 pr-2 pl-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+            r.panel,
+          )}
+        >
+          <span className={`absolute inset-y-0 left-0 w-[3px] ${r.rail}`} aria-hidden />
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-mono text-[11px] font-semibold tabular-nums">
+              {arrivalWindow(booking.startsAt, booking.endsAt)}
+            </span>
+            {/* Same ramp classes as PriorityChip, so the tier reads identically here and on the call list. */}
+            <Badge
+              title={r.label}
+              className={cn("h-4 rounded px-1 font-mono text-[10px] font-semibold tabular-nums", r.chip)}
+            >
+              {booking.priority}
+            </Badge>
+          </div>
+          <div className="truncate text-[11px]">{booking.customerName}</div>
+          <div className="truncate text-[11px] text-muted-foreground">{booking.town}</div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="items-start">
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium">{booking.customerName}</span>
+          <span className="text-background/70">{booking.issueSummary}</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
