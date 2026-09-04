@@ -18,6 +18,7 @@ import { Callbacks } from "./callbacks";
 import { Followups } from "./followups";
 import { Safety } from "./safety";
 import { sortFollowups } from "./sort";
+import { Utilization } from "./utilization";
 
 // A work queue is never stale on purpose. Nothing about it may be prerendered.
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 const LIMIT = 50;
 
 export default async function QueuePage() {
-  const [followups, callbacks, incidents] = await Promise.all([
+  const [followups, callbacks, incidents, techs] = await Promise.all([
     getFollowupQueue(LIMIT),
     getCallbackQueue(LIMIT),
     getSafetyIncidents(LIMIT),
@@ -69,6 +70,8 @@ export default async function QueuePage() {
           <Safety items={incidents} now={now} />
         </TabsContent>
       </Tabs>
+
+      <Utilization techs={techs} />
     </div>
   );
 }
