@@ -34,7 +34,14 @@ function toTrace(raw: unknown): ToolTraceEntry[] {
       args: (x.args ?? {}) as Record<string, unknown>,
       result: x.result,
       durationMs: Number(x.ms ?? x.durationMs ?? 0),
-      startedAt: String(x.startedAt ?? ""),
+      // `at` is what callState records now; older rows have neither, and "" used
+      // to reach the Denver formatter and throw. Null renders as no clock.
+      startedAt:
+        typeof x.at === "string" && x.at
+          ? x.at
+          : typeof x.startedAt === "string" && x.startedAt
+            ? x.startedAt
+            : null,
       error: typeof x.error === "string" ? x.error : undefined,
       forcedEscalation: Boolean(x.forced ?? x.forcedEscalation),
     };
@@ -45,6 +52,7 @@ const CALL_COLUMNS = `
   c.id, c.vapi_call_id, c.customer_id, c.from_number, c.started_at, c.ended_at,
   c.priority, c.priority_result, c.outcome, c.summary, c.sentiment, c.facts,
   c.transcript, c.tool_trace, c.recording_url,
+  c.cost_usd, c.requested, c.tech_notes, c.needs_human_followup, c.followup_reason,
   coalesce(c.town, cu.town) as town,
   coalesce(c.county, cu.county) as county,
   cu.name as caller_name`;
@@ -101,6 +109,7 @@ export async function getCall(id: string): Promise<CallDetail | null> {
     transcript: splitTranscript((r.transcript as string) ?? null, base.startedAt),
     toolTrace: toTrace(r.tool_trace),
     recordingUrl: (r.recording_url as string) ?? null,
+    ...ticketFields(r),
   };
 }
 
@@ -147,4 +156,26 @@ export async function listBookings(range: { from: string; to: string }): Promise
     status: r.status as Booking["status"],
     callId: (r.call_id as string) ?? null,
   }));
+}
+
+/** Empty strings from extraction are "nothing to say", not a note that says "". */
+const text = (v: unknown): string | null =>
+  typeof v === "string" && v.trim() !== "" ? v : null;
+
+/**
+ * The dispatch-ticket columns migration 0003 added. Pure, so it is testable
+ * without a database; `numeric(10,4)` arrives as a string over the wire.
+ */
+export function ticketFields(r: Record<string, unknown>): Pick<
+  CallDetail,
+  "costUsd" | "requested" | "techNotes" | "needsHumanFollowup" | "followupReason"
+> {
+  const cost = r.cost_usd == null ? null : Number(r.cost_usd);
+  return {
+    costUsd: cost != null && Number.isFinite(cost) ? cost : null,
+    requested: text(r.requested),
+    techNotes: text(r.tech_notes),
+    needsHumanFollowup: Boolean(r.needs_human_followup),
+    followupReason: text(r.followup_reason),
+  };
 }

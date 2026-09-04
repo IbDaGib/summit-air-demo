@@ -69,12 +69,6 @@ export function relativeAge(iso: string, now: number = Date.now()): string {
   return `${Math.round(secs / 86_400)}d ago`;
 }
 
-/** "6m 12s" — call length. */
-export function duration(startedAt: string, endedAt: string | null): string {
-  if (!endedAt) return "live";
-  const secs = Math.max(0, Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 1000));
-  return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
-}
 
 /** Minutes America/Denver is offset from UTC at that instant (DST-aware). */
 export function denverOffsetMinutes(at: Date): number {

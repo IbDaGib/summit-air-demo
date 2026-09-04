@@ -55,7 +55,8 @@ export interface ToolTraceEntry {
   /** Handler return value, or the error payload when `error` is set. */
   result: unknown;
   durationMs: number;
-  startedAt: string;
+  /** ISO instant, or null for trace entries recorded before timestamps existed. */
+  startedAt: string | null;
   /** Set when the handler failed. The call itself never sees a throw. */
   error?: string;
   /**
@@ -111,6 +112,14 @@ export interface CallDetail extends CallSummary {
   transcript: TranscriptTurn[];
   toolTrace: ToolTraceEntry[];
   recordingUrl: string | null;
+  /** Vapi's per-call cost, USD. Null until Vapi reports it, and for fixtures. */
+  costUsd: number | null;
+  /** One line: what the caller wanted. Post-call extraction. */
+  requested: string | null;
+  /** What the technician should know before arriving. Post-call extraction. */
+  techNotes: string | null;
+  needsHumanFollowup: boolean;
+  followupReason: string | null;
 }
 
 /** One row of `techs`. */

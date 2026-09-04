@@ -121,6 +121,11 @@ function build(spec: CallSpec): CallDetail {
     transcript,
     toolTrace,
     recordingUrl: live ? null : `https://storage.vapi.ai/${spec.id}.wav`,
+    costUsd: 0.1625,
+    requested: "Furnace not keeping up; wants a technician this week",
+    techNotes: "Elderly occupant on site. Gate code 4412, dog in the yard.",
+    needsHumanFollowup: false,
+    followupReason: null,
   };
 }
 

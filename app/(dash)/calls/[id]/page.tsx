@@ -26,7 +26,6 @@ import { OutcomeChip } from "../../_ui/outcome";
 import { PriorityBadge, PriorityChip, ramp } from "../../_ui/priority";
 import { denverMonthDay, denverTime, relativeAge } from "../../_ui/time";
 import { elapsedSeconds, traceClock } from "./fields";
-import { getTicketExtras, type TicketExtras } from "./ticket";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +37,7 @@ export const dynamic = "force-dynamic";
 export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
   const { id } = await props.params;
   // Same lookup predicate in both reads, so they describe the same row.
-  const [call, extras] = await Promise.all([getCall(id), getTicketExtras(id)]);
+  const call = await getCall(id);
   if (!call) notFound();
 
   const r = ramp(call.priority);
@@ -59,6 +58,7 @@ export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
         <span className={`absolute inset-y-0 left-0 w-[3px] ${r.rail}`} aria-hidden />
         <CardHeader>
           <CardTitle className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg">
+            <h1 className="contents">
             {call.callerName ?? (
               <span className="font-normal text-muted-foreground italic">Unrecognized caller</span>
             )}
@@ -69,6 +69,7 @@ export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
               {call.town ?? "—"}
               {call.county ? ` · ${call.county} County` : ""}
             </span>
+          </h1>
           </CardTitle>
           <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
             <span className="inline-flex items-center gap-2">
@@ -82,7 +83,7 @@ export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
               <span className="text-muted-foreground">Sentiment</span>
               <span className="capitalize">{call.sentiment ?? "—"}</span>
             </Badge>
-            {extras.needsHumanFollowup ? <Badge variant="secondary">Needs a human</Badge> : null}
+            {call.needsHumanFollowup ? <Badge variant="secondary">Needs a human</Badge> : null}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -97,7 +98,7 @@ export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
               <span className="tabular-nums">{secs === null ? "live" : duration(secs)}</span>
             </Meta>
             <Meta label="Cost">
-              <span className="tabular-nums">{usd(extras.costUsd)}</span>
+              <span className="tabular-nums">{usd(call.costUsd)}</span>
             </Meta>
             <Meta label="Vapi call">
               <span className="font-mono">{call.vapiCallId ?? "—"}</span>
@@ -144,7 +145,7 @@ export default async function CallDetailPage(props: PageProps<"/calls/[id]">) {
         </TabsContent>
 
         <TabsContent value="ticket">
-          <Ticket call={call} extras={extras} />
+          <Ticket call={call} />
         </TabsContent>
       </Tabs>
     </div>
@@ -284,7 +285,7 @@ function Payload({ value }: { value: unknown }) {
  * What dispatch reads: the post-call extraction, why the tier is what it is,
  * and the facts it was computed from.
  */
-function Ticket({ call, extras }: { call: CallDetail; extras: TicketExtras }) {
+function Ticket({ call }: { call: CallDetail }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
       <Card>
@@ -296,16 +297,16 @@ function Ticket({ call, extras }: { call: CallDetail; extras: TicketExtras }) {
           <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
             <Field label="Summary">{call.summary ?? <Empty inline>No summary.</Empty>}</Field>
             <Field label="Requested">
-              {extras.requested ?? <Empty inline>Not recorded.</Empty>}
+              {call.requested ?? <Empty inline>Not recorded.</Empty>}
             </Field>
             <Field label="Tech notes">
-              {extras.techNotes ?? <Empty inline>None.</Empty>}
+              {call.techNotes ?? <Empty inline>None.</Empty>}
             </Field>
             <Field label="Follow-up">
-              {extras.needsHumanFollowup ? (
+              {call.needsHumanFollowup ? (
                 <span className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">Needs a human</Badge>
-                  {extras.followupReason ?? <Empty inline>No reason given.</Empty>}
+                  {call.followupReason ?? <Empty inline>No reason given.</Empty>}
                 </span>
               ) : (
                 <Empty inline>None flagged.</Empty>

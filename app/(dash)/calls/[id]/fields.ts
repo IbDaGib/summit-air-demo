@@ -20,7 +20,7 @@ export function elapsedSeconds(startedAt: string, endedAt: string | null): numbe
  * no `startedAt` at all; `_data/client.ts` maps that to "", and formatting ""
  * threw RangeError and took the whole page down.
  */
-export function traceClock(iso: string): string | null {
+export function traceClock(iso: string | null): string | null {
   if (!iso || !Number.isFinite(Date.parse(iso))) return null;
   return denverTimeWithSeconds(iso);
 }

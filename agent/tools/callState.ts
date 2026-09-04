@@ -34,7 +34,7 @@ type CallState = {
   facts?: Record<string, unknown>;
   outcome?: string;
   /** Every tool call, for the dashboard trace and for live debugging. */
-  trace: { name: string; args: unknown; result: unknown; ms: number; forced: boolean }[];
+  trace: { name: string; args: unknown; result: unknown; ms: number; forced: boolean; at: string }[];
 };
 
 const STATE = new Map<string, CallState>();
@@ -83,10 +83,11 @@ export const BLOCKED_AFTER_ESCALATION = new Set(["find_slots", "book_appointment
 
 export function recordToolCall(
   callId: string,
-  entry: { name: string; args: unknown; result: unknown; ms: number; forced: boolean },
+  entry: { name: string; args: unknown; result: unknown; ms: number; forced: boolean; at?: string },
 ) {
   const s = get(callId);
-  s.trace.push(entry);
+  // Stamp each entry so the trace reads as a sequence; rows before this have no clock.
+  s.trace.push({ ...entry, at: entry.at ?? new Date().toISOString() });
   // The tier is decided once, by policy, during the call. Post-call extraction
   // deliberately does not re-derive it from prose.
   if (entry.name === "assess_situation") {
