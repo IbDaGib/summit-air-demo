@@ -46,6 +46,11 @@ const toPercent = (rate: number) => Math.round(rate * 1000) / 10;
 const fromPercent = (p: number) => Math.min(Math.max(p, 0), 100) / 100;
 
 const whole = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+/**
+ * 82.5 → "82.5"; 150 → "150". Bookings and missed calls are rates, not tallies:
+ * shown to the tenth so "82.5 × $425" multiplies out to the revenue beside it.
+ */
+const tenth = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
 export function RoiCalculator({
   initial,
@@ -122,8 +127,8 @@ export function RoiCalculator({
       <div className="grid gap-4 sm:grid-cols-2">
         <Stat
           label="Recovered bookings / month"
-          value={whole(out.recoveredBookingsPerMonth)}
-          detail={`from ${whole(out.missedCallsPerMonth)} calls that would have rung out`}
+          value={tenth(out.recoveredBookingsPerMonth)}
+          detail={`from ${tenth(out.missedCallsPerMonth)} calls that would have rung out`}
         />
         <Stat
           label="Recovered revenue / month"
