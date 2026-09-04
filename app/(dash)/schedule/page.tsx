@@ -78,7 +78,16 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
         </span>
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      {/*
+        Keyed by the week so a change of week remounts the grid and replays the
+        entrance: a short fade and a 0.5rem slide, 300ms, no layout shift. The
+        slide always comes from the right — the page has no client state to
+        know which arrow was pressed, and a wrong-way slide is worse than none.
+      */}
+      <Card
+        key={weekKey}
+        className="animate-in fade-in-0 slide-in-from-right-2 gap-0 overflow-hidden py-0 duration-300"
+      >
         <Table className="min-w-[64rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent [&_th]:h-8 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:tracking-wide [&_th]:uppercase">
