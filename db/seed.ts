@@ -632,20 +632,19 @@ async function main(): Promise<void> {
   if (customers.error) throw new Error(`customers: ${customers.error.message}`);
   console.log(`  customers  ${customerRows.length}`);
 
-  // Clear this run's slice of the id pool before rewriting it. Bookings created
-  // by a real call are outside the pool and survive untouched.
-  const pool = Array.from({ length: BOOKING_POOL_SIZE }, (_, i) => bookingId(i + 1));
-  for (const ids of chunk(pool, 50)) {
-    const del = await db.from("bookings").delete().in("id", ids);
-    if (del.error) throw new Error(`bookings cleanup: ${del.error.message}`);
-  }
-
+  // Write the schedule before removing anything.
+  //
+  // This used to delete the id pool and then insert. PostgREST cannot span a
+  // transaction, so any failure between the two left the demo schedule empty or
+  // half-rebuilt — destructive despite the seed being idempotent. Upserting on
+  // the deterministic id replaces each booking in place, so a failure at any
+  // point leaves the previous schedule intact rather than gone.
   const { rows, fill } = buildBookings(now);
   let inserted = 0;
   let skipped = 0;
 
   for (const batch of chunk(rows, 25)) {
-    const res = await db.from("bookings").insert(batch);
+    const res = await db.from("bookings").upsert(batch, { onConflict: "id" });
     if (!res.error) {
       inserted += batch.length;
       continue;
@@ -653,7 +652,7 @@ async function main(): Promise<void> {
     // A live booking may already hold one of these windows. Fall back to
     // row-by-row so one collision does not cost us the whole batch.
     for (const row of batch) {
-      const one = await db.from("bookings").insert(row);
+      const one = await db.from("bookings").upsert(row, { onConflict: "id" });
       if (!one.error) {
         inserted++;
       } else if (one.error.code === EXCLUSION_VIOLATION) {
@@ -664,7 +663,25 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`  bookings   ${inserted} inserted${skipped ? `, ${skipped} skipped (window already held)` : ""}`);
+  // Only now prune pool ids this run did not write — leftovers from a previous
+  // run that generated a different or larger schedule. Bookings created by a
+  // real call are outside the pool and are never touched.
+  const written = new Set(rows.map((r) => r.id));
+  const stale = Array.from({ length: BOOKING_POOL_SIZE }, (_, i) => bookingId(i + 1)).filter(
+    (id) => !written.has(id),
+  );
+  let pruned = 0;
+  for (const ids of chunk(stale, 50)) {
+    const del = await db.from("bookings").delete().in("id", ids).select("id");
+    if (del.error) throw new Error(`bookings prune: ${del.error.message}`);
+    pruned += del.data?.length ?? 0;
+  }
+
+  console.log(
+    `  bookings   ${inserted} written` +
+      `${skipped ? `, ${skipped} skipped (window already held)` : ""}` +
+      `${pruned ? `, ${pruned} pruned` : ""}`,
+  );
   for (const line of fill) console.log(`             ${line}`);
   console.log("Seed complete.");
 }
