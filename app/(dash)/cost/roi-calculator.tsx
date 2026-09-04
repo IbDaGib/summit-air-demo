@@ -153,9 +153,12 @@ export function RoiCalculator({
           large
           negative={negative}
           detail={
-            out.paybackCalls > 0
-              ? `Pays for itself after ${whole(out.paybackCalls)} calls — one recovered ticket covers that many.`
-              : "No agent cost to pay back."
+            // paybackCalls is how many calls one ticket funds, not time to break
+            // even — so say that. Gate on the cost, not on the output: an emptied
+            // ticket field also yields 0 calls, and the agent is not free then.
+            inputs.agentCostPerCallUsd <= 0
+              ? "No agent cost to pay back."
+              : `One recovered ${usd(inputs.avgTicketUsd)} ticket funds ${whole(out.paybackCalls)} calls of agent time.`
           }
           className="sm:col-span-2"
         />
