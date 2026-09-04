@@ -72,9 +72,16 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
           Week of {denverMonthDay(days[0].toISOString())} · {weekRelation(weekKey, now)} ·{" "}
           {techs.length} technicians · all times America/Denver
         </span>
+        {/* The grid's caption. An empty week keeps the full grid and says so here. */}
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-          {bookings.length} booked windows. A technician cannot hold two overlapping windows —
-          Postgres rejects it.
+          {bookings.length === 0 ? (
+            "No bookings this week. Every window is open."
+          ) : (
+            <>
+              {bookings.length} booked windows. A technician cannot hold two overlapping windows —
+              Postgres rejects it.
+            </>
+          )}
         </span>
       </div>
 
