@@ -51,17 +51,16 @@ const assistant = {
     "Hi there — thanks for calling Summit Air, this is Casey. I'm an AI and this call is recorded. What's going on today?",
 
   model: {
-    provider: "mistral",
-    // Overridable so the tier/latency tradeoff is one env var, not a code edit.
-    // mistral-large-latest is NOT available on all Mistral subscription tiers —
-    // it returns 403 tier_not_allowed, which Vapi surfaces only as the opaque
-    // "pipeline-error-mistral-llm-failed". Verified working: small, medium.
-    model: process.env.VAPI_MODEL ?? "mistral-medium-latest",
-    // Lowered from 0.4 after the model emitted its tool call as spoken text on
-    // a live call ("Tool calls. ID, four h two y y nine b j. Type, function...").
-    // A prompt rule forbids it, but that is an instruction the model can ignore,
-    // so this reduces the sampling that produced it. If it recurs, the next
-    // levers are mistral-small-latest or magistral-medium-latest.
+    // Default is gpt-5.6-luna. This was decided on 2026-09-04 and then lost:
+    // the edit was deployed from the working tree but never reached a commit,
+    // the tree was reset, and every later deploy silently shipped Mistral
+    // Medium. Mistral Medium through Vapi returns tool calls INSIDE the content
+    // string ({"content":"Tool calls: [{...}]"} with no tool_calls array), which
+    // Vapi streams to TTS — so the caller hears the JSON. Proven from Vapi's
+    // raw provider log on call 01a06d84. gpt-5.6-luna returns structured
+    // tool_calls (call_… ids) and never did this across every call today.
+    provider: process.env.VAPI_PROVIDER ?? "openai",
+    model: process.env.VAPI_MODEL ?? "gpt-5.6-luna",
     temperature: 0.2,
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
@@ -118,6 +117,24 @@ async function main() {
   if (!res.ok) throw new Error(`Vapi ${res.status}: ${body}`);
   const json = JSON.parse(body) as { id: string };
   console.log(existing ? "updated" : "created", "assistant", json.id);
+
+  // Verify what is live, not what was sent. The model default silently
+  // reverted once and four deploys shipped the wrong provider before anyone
+  // noticed — this makes that impossible to miss.
+  const check = await fetch(`${API}/assistant/${json.id}`, {
+    headers: { Authorization: `Bearer ${KEY}` },
+  });
+  const live = (await check.json()) as {
+    model?: { provider?: string; model?: string; messages?: { content?: string }[] };
+    firstMessage?: string;
+  };
+  const want = `${assistant.model.provider}/${assistant.model.model}`;
+  const got = `${live.model?.provider}/${live.model?.model}`;
+  console.log(`live model:  ${got}`);
+  console.log(`live prompt: ${(live.model?.messages?.[0]?.content ?? "").length} chars`);
+  if (got !== want) {
+    throw new Error(`deployed ${want} but Vapi reports ${got} — refusing to call this a success`);
+  }
   if (!existing) console.log("Set VAPI_ASSISTANT_ID=" + json.id + " in .env.local");
 }
 
