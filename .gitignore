@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Keep the template tracked; the .env* rule above would otherwise hide it.
+!.env.example

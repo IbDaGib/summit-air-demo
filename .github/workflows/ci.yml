@@ -10,5 +10,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Next 16 generates global page/layout types; tsc fails on a clean checkout without it.
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npx vitest run
