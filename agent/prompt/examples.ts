@@ -1,25 +1,16 @@
 /**
- * NOT COMPOSED INTO THE PROMPT. Kept as the record of a failed experiment.
+ * NOT COMPOSED INTO THE PROMPT — untested, not disproven.
  *
- * Added on the audit's recommendation and reverted after one call: the model
- * imitated the `Tool Call:` lines as spoken output and read tool-call JSON to
- * the caller — "Tool calls, w w j q k x q j three. Type, function. Name, assess
- * situation. Arguments. Property type residential..." — which is the precise
- * failure the examples were meant to prevent.
+ * Added on the Vapi audit's recommendation and reverted after one call in which
+ * the agent read tool-call JSON aloud. That revert blamed these examples. It was
+ * wrong: the call ran on mistral-medium-latest (a deploy default that had
+ * silently reverted), and Vapi's raw provider log shows Mistral returning the
+ * tool call inside the content string — the same thing it did on two earlier
+ * calls that had no examples at all. See KNOWN_ISSUES "Vapi and Mistral".
  *
- * If examples are tried again, the tool-call lines must not look like a
- * transcript the model can speak: describe the call in prose ("you check the
- * service area"), or move the examples into the tool descriptions where they
- * are never adjacent to spoken text.
- *
- * Three worked calls: the happy path, the hard stop, and a tool failure.
- *
- * These exist because rules alone did not hold. Every defect a real call
- * produced — reading a tool call aloud, stacking filler, saying goodbye three
- * times — was already forbidden in prose and happened anyway. A model imitates
- * a transcript more reliably than it obeys a prohibition.
- *
- * Tool names appear only on `Tool Call:` lines, never in spoken text.
+ * Whether `Tool Call:` lines in a prompt nudge a *structured-calling* model
+ * toward text is a real question, and a fair one to test on gpt-5.6-luna with a
+ * controlled A/B. It has not been tested. Do not re-enable before the demo.
  */
 export const EXAMPLES = `
 ## Examples

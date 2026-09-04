@@ -102,3 +102,16 @@ Written as I built. Feeds the self-critique in the demo.
   versus 11.6k originally. Examples earn it — every defect they target was already forbidden
   in prose and happened anyway — but it is ~25% more prompt tokens per turn, which lands on
   the LLM slice of the bill (about 15% of the total, so roughly 4% overall).
+
+## Vapi and Mistral
+
+Do not run this assistant on Mistral through Vapi's native model config. Vapi's Mistral adapter
+flattens conversation history: prior tool calls are sent as the literal text
+`"Tool calls: [{...}]"` in an assistant turn, and tool results as `user` messages reading
+`"Tool result for <id>: ..."` — no `tool_calls` fields, no `role: "tool"`. Shown that format in
+its own history, Mistral starts emitting tool calls as content text, which Vapi streams to TTS.
+Every spoken-JSON incident on 2026-09-04 was a Mistral call; none was gpt-5.6-luna, which
+receives and returns structured `tool_calls` (`call_…` ids). Proven from `artifact.logUrl` on
+call 01a06d84 (request and response bodies). The right fix for Mistral is the custom LLM
+endpoint, where the message array is ours; until then, the deploy script verifies the live
+model after every deploy and refuses to report success on a mismatch.

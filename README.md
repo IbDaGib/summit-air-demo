@@ -141,6 +141,13 @@ silently failed to record its outcome. Found it in a tool trace, not in a test. 
 isn't "be careful"; it's that the deploy script has to be the only path to the assistant, and
 a deploy from an uncommitted tree is a bug even when it works.
 
+The same commit-loss took the model default with it. The morning decision to run gpt-5.6-luna
+was deployed from the working tree and never committed; a reset put Mistral back, and four
+later deploys shipped it without anyone noticing — until a caller heard tool-call JSON read
+aloud. Vapi's raw provider log showed why: its Mistral adapter flattens tool calls into text
+in the history, and Mistral imitates it. The deploy script now reads the assistant back after
+every PATCH and throws if the live model isn't the one it sent.
+
 ---
 
 ## Dashboard
