@@ -45,7 +45,8 @@ export interface CallVolume {
 }
 
 export async function getCallVolume(range = last30Days()): Promise<CallVolume> {
-  if (!hasDbConfig()) return { total: 0, booked: 0, escalated: 0, callback: 0, unresolved: 0 };
+  if (!hasDbConfig())
+    return { total: 0, booked: 0, escalated: 0, callback: 0, unresolved: 0 };
   const [r] = await query<Record<string, number>>(
     `select count(*)::int as total,
             count(*) filter (where outcome = 'booked')::int as booked,
@@ -69,7 +70,9 @@ export interface PriorityMix {
   untiered: number;
 }
 
-export async function getPriorityMix(range = last30Days()): Promise<PriorityMix> {
+export async function getPriorityMix(
+  range = last30Days(),
+): Promise<PriorityMix> {
   if (!hasDbConfig()) return { P0: 0, P1: 0, P2: 0, P3: 0, untiered: 0 };
   const [r] = await query<Record<string, number>>(
     `select count(*) filter (where priority = 'P0')::int as "P0",
@@ -97,11 +100,18 @@ export interface CostSummary {
   costPerBookingUsd: number | null;
 }
 
-export async function getCostSummary(range = last30Days()): Promise<CostSummary> {
+export async function getCostSummary(
+  range = last30Days(),
+): Promise<CostSummary> {
   if (!hasDbConfig()) {
     return {
-      calls: 0, totalUsd: 0, avgPerCallUsd: 0, avgPerMinuteUsd: 0,
-      totalMinutes: 0, avgDurationSeconds: 0, costPerBookingUsd: null,
+      calls: 0,
+      totalUsd: 0,
+      avgPerCallUsd: 0,
+      avgPerMinuteUsd: 0,
+      totalMinutes: 0,
+      avgDurationSeconds: 0,
+      costPerBookingUsd: null,
     };
   }
   const [r] = await query<Record<string, string | number | null>>(
@@ -124,7 +134,10 @@ export async function getCostSummary(range = last30Days()): Promise<CostSummary>
     avgPerMinuteUsd: totalMinutes > 0 ? Number(r.total_usd) / totalMinutes : 0,
     totalMinutes,
     avgDurationSeconds: Number(r.avg_duration_seconds),
-    costPerBookingUsd: booked > 0 && r.booked_cost != null ? Number(r.booked_cost) / booked : null,
+    costPerBookingUsd:
+      booked > 0 && r.booked_cost != null
+        ? Number(r.booked_cost) / booked
+        : null,
   };
 }
 
@@ -138,8 +151,11 @@ export interface SentimentMix {
   unknown: number;
 }
 
-export async function getSentimentMix(range = last30Days()): Promise<SentimentMix> {
-  if (!hasDbConfig()) return { calm: 0, anxious: 0, frustrated: 0, distressed: 0, unknown: 0 };
+export async function getSentimentMix(
+  range = last30Days(),
+): Promise<SentimentMix> {
+  if (!hasDbConfig())
+    return { calm: 0, anxious: 0, frustrated: 0, distressed: 0, unknown: 0 };
   const [r] = await query<Record<string, number>>(
     `select count(*) filter (where sentiment = 'calm')::int as calm,
             count(*) filter (where sentiment = 'anxious')::int as anxious,
@@ -165,7 +181,9 @@ export interface AfterHoursShare {
  * The "never miss a call at 2am in January" number. This is the value prop for
  * a shop whose phones ring hardest when nobody is at the desk.
  */
-export async function getAfterHoursShare(range = last30Days()): Promise<AfterHoursShare> {
+export async function getAfterHoursShare(
+  range = last30Days(),
+): Promise<AfterHoursShare> {
   if (!hasDbConfig()) return { total: 0, afterHours: 0, pct: 0 };
   const [r] = await query<Record<string, number>>(
     `with local as (
@@ -180,7 +198,8 @@ export async function getAfterHoursShare(range = last30Days()): Promise<AfterHou
      from local`,
     R(range),
   );
-  const total = Number(r.total), afterHours = Number(r.after_hours);
+  const total = Number(r.total),
+    afterHours = Number(r.after_hours);
   return { total, afterHours, pct: total ? (afterHours / total) * 100 : 0 };
 }
 
@@ -193,7 +212,9 @@ export interface TownRow {
   booked: number;
 }
 
-export async function getTownBreakdown(range = last30Days()): Promise<TownRow[]> {
+export async function getTownBreakdown(
+  range = last30Days(),
+): Promise<TownRow[]> {
   if (!hasDbConfig()) return [];
   // Group on town alone: calls record the town the caller named but not always
   // the county, so grouping on both split "Bozeman" into two rows. The county is
@@ -295,7 +316,39 @@ export async function getFollowupQueue(
     priority: (r.priority as string) ?? null,
     reason: (r.followup_reason as string) ?? null,
     summary: (r.summary as string) ?? null,
-    resolvedAt: r.followup_resolved_at ? new Date(String(r.followup_resolved_at)).toISOString() : null,
+    resolvedAt: r.followup_resolved_at
+      ? new Date(String(r.followup_resolved_at)).toISOString()
+      : null,
+  }));
+}
+
+/** Resolved follow-ups are fetched separately so a large open backlog cannot hide them. */
+export async function getResolvedFollowupQueue(
+  limit = 50,
+): Promise<FollowupItem[]> {
+  if (!hasDbConfig()) return [];
+  const rows = await query<Record<string, unknown>>(
+    `select c.id, c.started_at, coalesce(cu.name, c.from_number, 'Unknown caller') as caller,
+            coalesce(c.town, cu.town) as town, c.priority::text as priority,
+            c.followup_reason, c.summary, c.followup_resolved_at
+     from calls c left join customers cu on cu.id = c.customer_id
+     where c.needs_human_followup
+       and c.followup_resolved_at is not null
+     order by c.priority nulls last, c.started_at desc
+     limit $1`,
+    [limit],
+  );
+  return rows.map((r) => ({
+    callId: String(r.id),
+    startedAt: new Date(String(r.started_at)).toISOString(),
+    caller: String(r.caller),
+    town: (r.town as string) ?? null,
+    priority: (r.priority as string) ?? null,
+    reason: (r.followup_reason as string) ?? null,
+    summary: (r.summary as string) ?? null,
+    resolvedAt: r.followup_resolved_at
+      ? new Date(String(r.followup_resolved_at)).toISOString()
+      : null,
   }));
 }
 
@@ -325,7 +378,9 @@ export async function getCallbackQueue(limit = 50): Promise<CallbackItem[]> {
     reason: String(r.reason),
     notes: (r.notes as string) ?? null,
     resolved: Boolean(r.resolved),
-    resolvedAt: r.resolved_at ? new Date(String(r.resolved_at)).toISOString() : null,
+    resolvedAt: r.resolved_at
+      ? new Date(String(r.resolved_at)).toISOString()
+      : null,
   }));
 }
 
@@ -337,7 +392,9 @@ export interface SafetyIncidentRow {
   phone: string | null;
 }
 
-export async function getSafetyIncidents(limit = 50): Promise<SafetyIncidentRow[]> {
+export async function getSafetyIncidents(
+  limit = 50,
+): Promise<SafetyIncidentRow[]> {
   if (!hasDbConfig()) return [];
   const rows = await query<Record<string, unknown>>(
     `select id, created_at, hazard, town, phone from safety_incidents

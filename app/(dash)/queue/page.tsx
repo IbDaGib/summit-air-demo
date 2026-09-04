@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getCallbackQueue,
   getFollowupQueue,
+  getResolvedFollowupQueue,
   getSafetyIncidents,
   getTechUtilization,
 } from "../_data/metrics";
@@ -33,12 +34,14 @@ export default async function QueuePage({ searchParams }: PageProps<"/queue">) {
   const showResolved = resolved === "1";
 
   // One past the cap, so the badge can tell "exactly 50" from "50 and more".
-  const [followups, callbacks, incidents, techs] = await Promise.all([
-    getFollowupQueue(LIMIT + 1, { includeResolved: showResolved }),
-    getCallbackQueue(LIMIT + 1),
-    getSafetyIncidents(LIMIT + 1),
-    getTechUtilization(),
-  ]);
+  const [followups, resolvedFollowups, callbacks, incidents, techs] =
+    await Promise.all([
+      getFollowupQueue(LIMIT + 1),
+      showResolved ? getResolvedFollowupQueue(LIMIT) : Promise.resolve([]),
+      getCallbackQueue(LIMIT + 1),
+      getSafetyIncidents(LIMIT + 1),
+      getTechUtilization(),
+    ]);
   // One clock for every "3m ago" on the page, so two rows never disagree.
   const now = new Date();
   const shownCallbacks = callbacks.slice(0, LIMIT);
@@ -46,13 +49,15 @@ export default async function QueuePage({ searchParams }: PageProps<"/queue">) {
   // first, so ≤50 open is exact and ≥51 reads 50+. Counting the sliced list
   // capped it at 50 — the bug this comment exists to keep dead. With resolved
   // rows shown, the follow-up badge still counts only what is left to do.
-  const openFollowups = followups.filter((f) => f.resolvedAt === null).length;
+  const openFollowups = followups.length;
   const openCallbacks = callbacks.filter((c) => !c.resolved).length;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-5">
       <div className="space-y-0.5">
-        <h1 className="text-base font-semibold tracking-tight">Needs a human</h1>
+        <h1 className="text-base font-semibold tracking-tight">
+          Needs a human
+        </h1>
         <p className="text-sm text-muted-foreground">
           What the agent could not finish. Work top to bottom.
         </p>
@@ -83,7 +88,10 @@ export default async function QueuePage({ searchParams }: PageProps<"/queue">) {
             </Button>
           </div>
           <Followups
-            items={sortFollowups(followups.slice(0, LIMIT))}
+            items={sortFollowups([
+              ...followups.slice(0, LIMIT),
+              ...resolvedFollowups,
+            ])}
             now={now}
             showingResolved={showResolved}
           />
