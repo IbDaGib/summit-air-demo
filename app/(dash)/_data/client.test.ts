@@ -20,7 +20,9 @@ describe("listCallsSince", () => {
     await listCallsSince("2026-09-04T15:00:00.000Z");
 
     expect(db.query).toHaveBeenCalledOnce();
-    expect(db.query.mock.calls[0]?.[0]).toContain("where c.started_at > $1");
+    expect(db.query.mock.calls[0]?.[0]).toContain(
+      "where coalesce(c.ended_at, c.started_at) > $1",
+    );
     expect(db.query.mock.calls[0]?.[0]).not.toMatch(/\blimit\b/i);
     expect(db.query.mock.calls[0]?.[1]).toEqual(["2026-09-04T15:00:00.000Z"]);
   });

@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -13,31 +16,42 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { listBookings, listTechs } from "../_data/client";
 import type { Booking, Tech } from "../_data/types";
 import { ramp, RampLegend } from "../_ui/priority";
+import { arrivalWindow, denverDayKey, denverMonthDay, denverWeekday } from "../_ui/time";
 import {
-  arrivalWindow,
-  denverDayKey,
-  denverInstant,
-  denverMonthDay,
-  denverWeekday,
-} from "../_ui/time";
+  parseWeekParam,
+  shiftWeek,
+  weekDays,
+  weekKeyOf,
+  weekRange,
+  weekRelation,
+  type WeekKey,
+} from "./week";
 
 export const dynamic = "force-dynamic";
 
-const DAYS = 5;
-
-export default async function SchedulePage() {
+/**
+ * One Denver week, Mon–Fri, chosen by `?week=YYYY-MM-DD` (a Monday). Anything
+ * else in that param — missing, mistyped, a Tuesday — means this week. The
+ * grid is the same shape whatever the week holds, so an empty week reads as
+ * "nothing booked", never as "nothing loaded".
+ */
+export default async function SchedulePage({ searchParams }: PageProps<"/schedule">) {
   const now = new Date();
-  // Day 0 is today in Denver; the window runs to the end of day 4.
-  const from = denverInstant(0, 0, now);
-  const to = denverInstant(DAYS, 0, now);
+  const { week } = await searchParams;
+  const weekKey = parseWeekParam(week, now);
+  const isCurrentWeek = weekKey === weekKeyOf(now);
+
+  // Mon 00:00 -> Sat 00:00 Denver, resolved at each instant so DST weeks stay honest.
+  const { from, to } = weekRange(weekKey);
 
   const [techs, bookings] = await Promise.all([
     listTechs(),
     listBookings({ from: from.toISOString(), to: to.toISOString() }),
   ]);
 
-  const days = Array.from({ length: DAYS }, (_, i) => denverInstant(i, 12, now));
+  const days = weekDays(weekKey);
   const dayKeys = days.map((d) => denverDayKey(d));
+  // Only lights a column when today actually sits inside the shown week.
   const todayKey = denverDayKey(now);
 
   // techId -> dayKey -> bookings, already sorted by start time upstream.
@@ -51,18 +65,39 @@ export default async function SchedulePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h1 className="text-base font-semibold tracking-tight">Schedule</h1>
+        <WeekNav weekKey={weekKey} isCurrentWeek={isCurrentWeek} />
         <span className="text-sm text-muted-foreground tabular-nums">
-          Next {DAYS} days · {techs.length} technicians · all times America/Denver
+          Week of {denverMonthDay(days[0].toISOString())} · {weekRelation(weekKey, now)} ·{" "}
+          {techs.length} technicians · all times America/Denver
         </span>
+        {/* The grid's caption. An empty week keeps the full grid and says so here. */}
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-          {bookings.length} booked windows. A technician cannot hold two overlapping windows —
-          Postgres rejects it.
+          {bookings.length === 0 ? (
+            "No bookings this week. Every window is open."
+          ) : (
+            <>
+              {bookings.length} booked windows. A technician cannot hold two overlapping windows —
+              Postgres rejects it.
+            </>
+          )}
         </span>
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      {/*
+        Keyed by the week so a change of week remounts the grid and replays the
+        entrance: a short fade and a 0.5rem slide, 300ms, no layout shift. The
+        slide always comes from the right — the page has no client state to
+        know which arrow was pressed, and a wrong-way slide is worse than none.
+        `motion-safe:` because the first frame is opacity 0: a viewer who has
+        asked for reduced motion gets the grid at rest, not a fade they cannot
+        see finish.
+      */}
+      <Card
+        key={weekKey}
+        className="gap-0 overflow-hidden py-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-2 motion-safe:duration-300"
+      >
         <Table className="min-w-[64rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent [&_th]:h-8 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:tracking-wide [&_th]:uppercase">
@@ -113,7 +148,7 @@ export default async function SchedulePage() {
             {techs.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={DAYS + 1}
+                  colSpan={days.length + 1}
                   className="py-16 text-center text-sm whitespace-normal text-muted-foreground"
                 >
                   No technicians on the roster, so there is nothing to schedule against.
@@ -128,6 +163,39 @@ export default async function SchedulePage() {
         <RampLegend />
       </div>
     </div>
+  );
+}
+
+/**
+ * ← Today →, as links. Each week is a URL, so the browser's back button and a
+ * shared link both work, and nothing on the page holds client state. "Today"
+ * points at the bare route rather than `?week=<this Monday>` so the address
+ * bar reads clean when you are back where you started.
+ */
+function WeekNav({ weekKey, isCurrentWeek }: { weekKey: WeekKey; isCurrentWeek: boolean }) {
+  return (
+    <nav aria-label="Week" className="flex items-center gap-1">
+      <Button asChild variant="outline" size="icon-sm">
+        <Link href={`/schedule?week=${shiftWeek(weekKey, -1)}`} aria-label="Previous week">
+          <ChevronLeft aria-hidden />
+        </Link>
+      </Button>
+      {isCurrentWeek ? (
+        // A disabled <a> is not a thing, so the current week gets a real button.
+        <Button variant="outline" size="sm" disabled aria-current="date">
+          Today
+        </Button>
+      ) : (
+        <Button asChild variant="outline" size="sm">
+          <Link href="/schedule">Today</Link>
+        </Button>
+      )}
+      <Button asChild variant="outline" size="icon-sm">
+        <Link href={`/schedule?week=${shiftWeek(weekKey, 1)}`} aria-label="Next week">
+          <ChevronRight aria-hidden />
+        </Link>
+      </Button>
+    </nav>
   );
 }
 

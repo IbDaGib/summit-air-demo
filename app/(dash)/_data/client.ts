@@ -92,13 +92,13 @@ export async function listCalls(limit = 50): Promise<CallSummary[]> {
 export async function listCallsSince(since: string): Promise<CallSummary[]> {
   if (!hasDbConfig()) {
     const after = Date.parse(since);
-    return CALLS.filter((call) => Date.parse(call.startedAt) > after);
+    return CALLS.filter((call) => Date.parse(call.endedAt ?? call.startedAt) > after);
   }
   const rows = await query<CallRow>(
     `select ${CALL_COLUMNS} from calls c
      left join customers cu on cu.id = c.customer_id
-     where c.started_at > $1
-     order by c.started_at desc`,
+     where coalesce(c.ended_at, c.started_at) > $1
+     order by coalesce(c.ended_at, c.started_at) desc`,
     [since],
   );
   return rows.map(toSummary);
