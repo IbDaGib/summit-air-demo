@@ -86,3 +86,19 @@ Written as I built. Feeds the self-critique in the demo.
   Fix is to subtract a calendar day from today's day key instead. Same review.
 - `calls.priority_result` is null for every call recorded before 2026-09-04 ~05:30 PDT: the webhook
   stored only the tier. The detail page labels those rows "tier assigned, reason not stored".
+
+## Voice agent (from the Vapi prompt audit)
+
+- **Tool names still appear ~19 times in prompt prose.** The audit's position is that
+  caller-facing prose should describe tools by capability, with exact names confined to
+  `Tool Call:` lines and schemas. Given the model once read a tool call aloud, that prose is
+  plausibly reinforcing the pattern it is told to avoid. Not changed before the demo because
+  rewording every hard gate is a behavioural change needing verification calls.
+- **No pronunciation dictionary.** The agent says "Innis" for Ennis. Vapi's own voice provider
+  may not support pronunciation replacements; the fix is likely an ElevenLabs voice plus a
+  dictionary for Ennis, Gallatin and Kalispell.
+- **The prompt grew to fit examples.** Rules are 18% shorter than before the condensation, but
+  three worked examples and the runtime-context block put the assembled prompt at 13.1k chars
+  versus 11.6k originally. Examples earn it — every defect they target was already forbidden
+  in prose and happened anyway — but it is ~25% more prompt tokens per turn, which lands on
+  the LLM slice of the bill (about 15% of the total, so roughly 4% overall).

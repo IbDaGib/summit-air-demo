@@ -24,6 +24,15 @@ const SECRET = process.env.VAPI_WEBHOOK_SECRET;
 if (!KEY) throw new Error("VAPI_API_KEY is not set");
 if (!BASE) throw new Error("VAPI_BASE_URL is not set (origin only, no path)");
 
+/**
+ * Spoken while a slow tool runs. Only the two that make a caller wait — the
+ * others return in single-digit milliseconds and a filler there is noise.
+ */
+const REQUEST_START: Record<string, string> = {
+  find_slots: "Let me pull up the schedule.",
+  book_appointment: "Booking that in now.",
+};
+
 const assistant = {
   name: "Summit Air — inbound",
 
@@ -56,6 +65,9 @@ const assistant = {
     temperature: 0.2,
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
+    // Filler is configuration, not a prompt rule. Asking the model to say
+    // "let me pull up the schedule" once produced eight stacked fillers on a
+    // real call; a request-start message fires exactly once per invocation.
     tools: TOOL_LIST.map((t) => ({
       type: "function",
       function: {
@@ -64,6 +76,9 @@ const assistant = {
         parameters: t.parameters,
       },
       server: { url: SERVER_URL, secret: SECRET },
+      ...(REQUEST_START[t.name]
+        ? { messages: [{ type: "request-start", content: REQUEST_START[t.name] }] }
+        : {}),
     })),
   },
 
@@ -75,7 +90,7 @@ const assistant = {
   // choice. Too high and the agent feels slow; too low and it interrupts people
   // mid-sentence while they think about their address.
   startSpeakingPlan: { waitSeconds: 0.4 },
-  silenceTimeoutSeconds: 20,
+  silenceTimeoutSeconds: 12,
   maxDurationSeconds: 420,
 
   // The caller must always be able to cut in.

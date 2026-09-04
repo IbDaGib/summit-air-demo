@@ -38,7 +38,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   check_service_area: {
     name: "check_service_area",
     description:
-      "Check whether a town is inside the service area. Call before offering any appointment. Never guess coverage.",
+      "Check whether a town is inside the service area. Call this as soon as the caller names their town, and always before offering any appointment. Pass the town name ONLY — never a street number, never a full address, never a state. If the caller says '1569 Lone Mountain Trail, Big Sky', pass 'Big Sky'. Never guess coverage.",
     parameters: obj({ town: { type: "string" } }, ["town"]),
   },
 
@@ -95,7 +95,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   find_slots: {
     name: "find_slots",
     description:
-      "Find available arrival windows. Say something like 'let me pull up the schedule' BEFORE calling this so the caller is not left in silence.",
+      "Find available arrival windows. Call this only after assess_situation has returned a priority, and only for a town that check_service_area confirmed is covered. Do not call it to browse availability before you know the priority, and do not call it again for the same town and date once you have offered windows.",
     parameters: obj(
       {
         town: { type: "string" },
@@ -116,7 +116,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   book_appointment: {
     name: "book_appointment",
     description:
-      "Book a confirmed appointment in one of the slots returned by find_slots. Only call this once the caller has verbally agreed to a specific window and you have read their address back to them. If it returns a conflict, apologize briefly and offer the alternatives it returns.",
+      "Book a confirmed appointment in one of the slots returned by find_slots. Only call this once the caller has verbally agreed to a specific window and you have read their service address back to them. Do NOT call it on a call where escalate_emergency fired, do not call it with a slotId you did not receive from find_slots, and do not call it twice for one caller. If it returns a conflict, apologize briefly and offer the alternatives it returns.",
     parameters: obj(
       {
         slotId: { type: "string" },
@@ -138,7 +138,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   save_callback_request: {
     name: "save_callback_request",
     description:
-      "Record a request for a human to call back. Use for: out-of-area callers, no slot matching their availability, a caller who asks for a person, an upset caller, or any tool failure. This is the graceful-failure path — never invent a booking instead.",
+      "Record a request for a human to call back. Call it as soon as you know a booking is not going to happen on this call: an out-of-area caller, no slot matching their availability, a caller who asks for a person, an upset caller, a billing or warranty question, or any tool failure. Do not end a call that reached none of the three valid endings without calling this. Never invent a booking instead.",
     parameters: obj(
       {
         customerName: { type: "string" },
