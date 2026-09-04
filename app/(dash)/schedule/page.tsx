@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -14,7 +17,15 @@ import { listBookings, listTechs } from "../_data/client";
 import type { Booking, Tech } from "../_data/types";
 import { ramp, RampLegend } from "../_ui/priority";
 import { arrivalWindow, denverDayKey, denverMonthDay, denverWeekday } from "../_ui/time";
-import { parseWeekParam, weekDays, weekRange, weekRelation } from "./week";
+import {
+  parseWeekParam,
+  shiftWeek,
+  weekDays,
+  weekKeyOf,
+  weekRange,
+  weekRelation,
+  type WeekKey,
+} from "./week";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +39,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
   const now = new Date();
   const { week } = await searchParams;
   const weekKey = parseWeekParam(week, now);
+  const isCurrentWeek = weekKey === weekKeyOf(now);
 
   // Mon 00:00 -> Sat 00:00 Denver, resolved at each instant so DST weeks stay honest.
   const { from, to } = weekRange(weekKey);
@@ -53,8 +65,9 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h1 className="text-base font-semibold tracking-tight">Schedule</h1>
+        <WeekNav weekKey={weekKey} isCurrentWeek={isCurrentWeek} />
         <span className="text-sm text-muted-foreground tabular-nums">
           Week of {denverMonthDay(days[0].toISOString())} · {weekRelation(weekKey, now)} ·{" "}
           {techs.length} technicians · all times America/Denver
@@ -131,6 +144,39 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
         <RampLegend />
       </div>
     </div>
+  );
+}
+
+/**
+ * ← Today →, as links. Each week is a URL, so the browser's back button and a
+ * shared link both work, and nothing on the page holds client state. "Today"
+ * points at the bare route rather than `?week=<this Monday>` so the address
+ * bar reads clean when you are back where you started.
+ */
+function WeekNav({ weekKey, isCurrentWeek }: { weekKey: WeekKey; isCurrentWeek: boolean }) {
+  return (
+    <nav aria-label="Week" className="flex items-center gap-1">
+      <Button asChild variant="outline" size="icon-sm">
+        <Link href={`/schedule?week=${shiftWeek(weekKey, -1)}`} aria-label="Previous week">
+          <ChevronLeft aria-hidden />
+        </Link>
+      </Button>
+      {isCurrentWeek ? (
+        // A disabled <a> is not a thing, so the current week gets a real button.
+        <Button variant="outline" size="sm" disabled aria-current="date">
+          Today
+        </Button>
+      ) : (
+        <Button asChild variant="outline" size="sm">
+          <Link href="/schedule">Today</Link>
+        </Button>
+      )}
+      <Button asChild variant="outline" size="icon-sm">
+        <Link href={`/schedule?week=${shiftWeek(weekKey, 1)}`} aria-label="Next week">
+          <ChevronRight aria-hidden />
+        </Link>
+      </Button>
+    </nav>
   );
 }
 
