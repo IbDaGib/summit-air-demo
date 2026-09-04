@@ -134,6 +134,33 @@ that works until the laptop sleeps. Redeploying from the repo fixed all three at
 
 ---
 
+## Dashboard
+
+Read-only, dark, gated by a shared secret: open any route once with `?key=<DASH_SECRET>` and a
+12-hour cookie is set. Two audiences, two nav groups.
+
+| Route | For | Shows |
+| --- | --- | --- |
+| `/calls` | dispatch | Every call, newest first, polled every 3s. Priority chip (P0 ember → P3 slate), outcome, one-line summary. A call appears within seconds of hang-up. |
+| `/calls/[id]` | dispatch · live debugging | Transcript, the **tool trace** (every tool call with args, result, ms, and whether the safety backstop forced it), and the ticket: computed priority *with its reason*, summary, what was requested, tech notes, follow-up. |
+| `/queue` | dispatch, 7am | Needs-a-human, callbacks (with the phone column — see PR #5), safety incidents (zero is shown as a good result), technician load for the next five business days. |
+| `/schedule` | dispatch | Six techs × five days of two-hour arrival windows. This is the `EXCLUDE` constraint made visible. |
+| `/overview` | Summit Air | Calls answered, booked, escalated, after-hours share, cost per call and per booking; 14-day volume; priority mix; calls by town. |
+| `/cost` | Summit Air | Measured per-call cost and where it goes (the LLM is the smallest slice), plus an ROI calculator seeded with real numbers that the stakeholder edits live. |
+
+Screenshots: `docs/screenshots/{calls,call-detail,schedule,queue,overview,cost}.png`.
+
+Conventions the pages hold each other to: every number that is money, duration, or a percent goes
+through `app/(dash)/_ui/format.ts`; priority colour is only ever the thermal ramp in
+`_ui/priority.tsx`; every card has an honest empty state; a call with no recorded outcome is
+labelled exactly that, never "in progress"; a database failure hits `error.tsx` and says so rather
+than rendering zeros. All aggregate reads live in `app/(dash)/_data/metrics.ts` — one SQL each —
+and pages compose them rather than writing their own queries.
+
+Built as four parallel workspaces against that metrics contract
+(`docs/plans/2026-09-04-shadcn-dashboard.md`), each spec-reviewed and quality-reviewed before merge;
+the review findings that changed the design are in the commit history and `KNOWN_ISSUES.md`.
+
 ## Evals
 
 Five scenarios — gas smell, no-heat-plus-elderly, routine maintenance, out-of-area,
