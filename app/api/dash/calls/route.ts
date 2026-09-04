@@ -13,8 +13,20 @@ import { listCalls } from "../../../(dash)/_data/client";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const calls = await listCalls();
+/**
+ * `?since=<ISO>` returns only calls that started after that instant, so the
+ * global toaster gets a delta rather than diffing two fifty-row lists. Rows
+ * appear here when the end-of-call report is written, which means a "new" call
+ * already carries its outcome and priority — a toast can say "booked" or
+ * "escalated" and be right.
+ */
+export async function GET(req: Request) {
+  const since = new URL(req.url).searchParams.get("since");
+  const all = await listCalls();
+  const calls =
+    since && !Number.isNaN(Date.parse(since))
+      ? all.filter((c) => Date.parse(c.startedAt) > Date.parse(since))
+      : all;
   return NextResponse.json(
     { calls, fetchedAt: new Date().toISOString() },
     { headers: { "cache-control": "no-store" } },

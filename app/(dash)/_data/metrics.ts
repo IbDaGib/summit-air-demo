@@ -266,19 +266,26 @@ export interface FollowupItem {
   priority: string | null;
   reason: string | null;
   summary: string | null;
+  /** When a person marked this done; null while it is still open. */
+  resolvedAt: string | null;
 }
 
 /** Dispatch's real morning work queue: calls that still need a person. */
-export async function getFollowupQueue(limit = 50): Promise<FollowupItem[]> {
+export async function getFollowupQueue(
+  limit = 50,
+  opts: { includeResolved?: boolean } = {},
+): Promise<FollowupItem[]> {
   if (!hasDbConfig()) return [];
   const rows = await query<Record<string, unknown>>(
     `select c.id, c.started_at, coalesce(cu.name, c.from_number, 'Unknown caller') as caller,
             coalesce(c.town, cu.town) as town, c.priority::text as priority,
-            c.followup_reason, c.summary
+            c.followup_reason, c.summary, c.followup_resolved_at
      from calls c left join customers cu on cu.id = c.customer_id
      where c.needs_human_followup
-     order by c.priority nulls last, c.started_at desc limit $1`,
-    [limit],
+       and ($2::boolean or c.followup_resolved_at is null)
+     order by (c.followup_resolved_at is not null), c.priority nulls last, c.started_at desc
+     limit $1`,
+    [limit, Boolean(opts.includeResolved)],
   );
   return rows.map((r) => ({
     callId: String(r.id),
@@ -288,6 +295,7 @@ export async function getFollowupQueue(limit = 50): Promise<FollowupItem[]> {
     priority: (r.priority as string) ?? null,
     reason: (r.followup_reason as string) ?? null,
     summary: (r.summary as string) ?? null,
+    resolvedAt: r.followup_resolved_at ? new Date(String(r.followup_resolved_at)).toISOString() : null,
   }));
 }
 
@@ -299,12 +307,13 @@ export interface CallbackItem {
   reason: string;
   notes: string | null;
   resolved: boolean;
+  resolvedAt: string | null;
 }
 
 export async function getCallbackQueue(limit = 50): Promise<CallbackItem[]> {
   if (!hasDbConfig()) return [];
   const rows = await query<Record<string, unknown>>(
-    `select id, created_at, customer_name, phone, reason, notes, resolved
+    `select id, created_at, customer_name, phone, reason, notes, resolved, resolved_at
      from callback_requests order by resolved, created_at desc limit $1`,
     [limit],
   );
@@ -316,6 +325,7 @@ export async function getCallbackQueue(limit = 50): Promise<CallbackItem[]> {
     reason: String(r.reason),
     notes: (r.notes as string) ?? null,
     resolved: Boolean(r.resolved),
+    resolvedAt: r.resolved_at ? new Date(String(r.resolved_at)).toISOString() : null,
   }));
 }
 

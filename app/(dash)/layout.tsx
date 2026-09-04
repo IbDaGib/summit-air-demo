@@ -13,6 +13,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarNav } from "./_ui/sidebar-nav";
+import { CallToaster } from "./_ui/call-toaster";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Summit Air — Dispatch",
@@ -56,6 +58,9 @@ export default function DashLayout({ children }: LayoutProps<"/">) {
             </header>
             <main className="flex flex-1 flex-col">{children}</main>
           </SidebarInset>
+          {/* One toaster for the whole dashboard; the poller is a no-op until Workspace C lands. */}
+          <Toaster position="bottom-right" richColors closeButton />
+          <CallToaster />
         </SidebarProvider>
       </TooltipProvider>
     </div>

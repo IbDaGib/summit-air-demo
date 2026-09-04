@@ -20,6 +20,7 @@ const item = (
   priority,
   reason: null,
   summary: null,
+  resolvedAt: null,
 });
 
 const FIXTURE: FollowupItem[] = [
