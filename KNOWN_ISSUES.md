@@ -64,3 +64,17 @@ Written as I built. Feeds the self-critique in the demo.
       every tier; a P1 on Labor Day gets the on-call pager via `responseTarget`
       rather than a bookable window. Defensible, but it is a choice, not a rule
       anyone asked for.
+
+## Dashboard metrics
+
+- `CallVolume.unresolved` lumps `outcome IS NULL` (in progress / dropped / pre-recording)
+  with `outcome = 'no_action'` (a real ending). The doc now says so and /overview labels it
+  honestly, but the right fix is an additive `noAction` field so dispatch can see the split.
+  Found by the Workspace A quality review.
+- `_ui/time.ts` `denverInstant` derives a day offset by shifting `now` by 24h×k *before*
+  taking the Denver day key, so for ~1 hour after a DST changeover the /overview legend range
+  can be one calendar day off the SQL series. Next transition 2026-11-01; zero demo risk.
+  Found by the Workspace A quality review.
+- `error.tsx` at `app/(dash)/` catches page errors client-side; a plain HTTP fetch of a
+  failing page still sees a 500 with the RSC payload, which is Next's design, not a gap.
+  Verified in a real browser — see the commit that closes this line.
