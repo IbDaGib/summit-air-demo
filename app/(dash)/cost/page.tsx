@@ -25,7 +25,8 @@ export default async function CostPage() {
     getDailySeries(30),
   ]);
 
-  const measured = summary.calls > 0;
+  // A call with no recorded cost is not a measurement of what a call costs.
+  const measured = summary.calls > 0 && summary.avgPerCallUsd > 0;
   const initial: RoiInputs = {
     ...DEFAULT_ROI_INPUTS,
     // Seeded at the precision the calculator displays (a tenth of a cent), so

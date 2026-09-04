@@ -2,7 +2,7 @@ import { cn } from "cn";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { CostSummary } from "../_data/metrics";
-import { duration, usd, usdPerUnit } from "../_ui/format";
+import { count, duration, usd, usdPerUnit } from "../_ui/format";
 
 /**
  * Where a call's cost goes, from the measured cost model. Static on purpose:
@@ -42,9 +42,9 @@ export function CostBreakdown({ summary }: { summary: CostSummary }) {
             <TableBody>
               {measured ? (
                 <>
-                  <Row label="Calls" value={summary.calls.toLocaleString("en-US")} />
+                  <Row label="Calls" value={count(summary.calls)} />
                   <Row label="Total spend" value={usd(summary.totalUsd)} />
-                  <Row label="Avg per call" value={usd(summary.avgPerCallUsd)} />
+                  <Row label="Avg per call" value={usdPerUnit(summary.avgPerCallUsd, "call")} />
                   <Row label="Avg per minute" value={usdPerUnit(summary.avgPerMinuteUsd, "min")} />
                   <Row label="Avg call length" value={duration(summary.avgDurationSeconds)} />
                   <Row

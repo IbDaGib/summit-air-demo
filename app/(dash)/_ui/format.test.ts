@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duration, pct, usd, usdPerUnit } from "./format";
+import { count, duration, pct, usd, usdPerUnit } from "./format";
 
 describe("usd", () => {
   it("shows cents below a dollar", () => {
@@ -68,6 +68,25 @@ describe("usdPerUnit", () => {
   it("renders null and undefined as an em dash without a unit", () => {
     expect(usdPerUnit(null, "min")).toBe("—");
     expect(usdPerUnit(undefined, "min")).toBe("—");
+  });
+});
+
+describe("count", () => {
+  it("groups thousands and leaves small tallies alone", () => {
+    expect(count(4250)).toBe("4,250");
+    expect(count(600)).toBe("600");
+    expect(count(0)).toBe("0");
+  });
+
+  it("rounds a fractional figure to a whole number", () => {
+    expect(count(82.5)).toBe("83");
+    expect(count(82.4)).toBe("82");
+  });
+
+  it("renders null, undefined and non-finite as an em dash", () => {
+    expect(count(null)).toBe("—");
+    expect(count(undefined)).toBe("—");
+    expect(count(Number.NaN)).toBe("—");
   });
 });
 

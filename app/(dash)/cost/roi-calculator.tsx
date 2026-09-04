@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { pct, usd, usdPerUnit } from "../_ui/format";
+import { count, pct, usd, usdPerUnit } from "../_ui/format";
 import { type FieldKind, parseFieldValue, toPercent } from "./fields";
 import { computeRoi, type RoiInputs } from "./roi";
 
@@ -41,7 +41,6 @@ const FIELDS: readonly Field[] = [
 
 const UNIT: Record<FieldKind, string> = { count: "calls", percent: "%", usd: "USD" };
 
-const whole = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 /**
  * 82.5 → "82.5"; 150 → "150". Bookings and missed calls are rates, not tallies:
  * shown to the tenth so "82.5 × $425" multiplies out to the revenue beside it.
@@ -139,7 +138,7 @@ export function RoiCalculator({
         <Stat
           label="Agent cost / month"
           value={usd(out.agentMonthlyCostUsd)}
-          detail={`${whole(inputs.callsPerMonth)} calls × ${usdPerUnit(inputs.agentCostPerCallUsd, "call")} — every call, not only the recovered ones`}
+          detail={`${count(inputs.callsPerMonth)} calls × ${usdPerUnit(inputs.agentCostPerCallUsd, "call")} — every call, not only the recovered ones`}
         />
         <Stat
           label="Net / month"
@@ -152,7 +151,7 @@ export function RoiCalculator({
             // ticket field also yields 0 calls, and the agent is not free then.
             inputs.agentCostPerCallUsd <= 0
               ? "No agent cost to pay back."
-              : `One recovered ${usd(inputs.avgTicketUsd)} ticket funds ${whole(out.paybackCalls)} calls of agent time.`
+              : `One recovered ${usd(inputs.avgTicketUsd)} ticket funds ${count(out.paybackCalls)} calls of agent time.`
           }
           className="sm:col-span-2"
         />

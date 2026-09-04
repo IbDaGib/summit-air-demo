@@ -1,5 +1,5 @@
 /**
- * Money, percent and duration formatters shared by every dashboard page.
+ * Money, count, percent and duration formatters shared by every dashboard page.
  *
  * The signatures are a contract: other pages import these by name, so change
  * behaviour here with a test, never the shape. Every formatter accepts
@@ -49,6 +49,12 @@ export function usdPerUnit(n: number | null | undefined, unit: string): string {
   if (isMissing(n)) return DASH;
   const amount = Math.abs(n) < 1 ? mills.format(n) : usd(n);
   return `${amount} / ${unit}`;
+}
+
+/** count(4250) → "4,250"; count(82.5) → "83". A whole-number tally, thousands grouped. */
+export function count(n: number | null | undefined): string {
+  if (isMissing(n)) return DASH;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 /** pct(100) → "100%"; pct(7.5) → "7.5%"; pct(0) → "0%". One decimal only below ten. */
