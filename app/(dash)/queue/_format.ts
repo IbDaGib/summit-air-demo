@@ -54,3 +54,13 @@ export function formatPhone(raw: string): string {
     ? `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}`
     : raw;
 }
+
+/**
+ * A text column as something to show, or null. The database accepts an empty
+ * or whitespace-only string where a person left the field blank; treating
+ * that as text renders an empty cell, or a tel: link with nothing behind it.
+ */
+export function present(s: string | null | undefined): string | null {
+  const t = s?.trim() ?? "";
+  return t === "" ? null : t;
+}

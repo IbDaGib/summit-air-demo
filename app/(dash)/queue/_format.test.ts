@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPhone, relativeTime } from "./_format";
+import { formatPhone, present, relativeTime } from "./_format";
 
 // 7:00 AM MDT on Thursday 3 September 2026 — the moment dispatch opens the page.
 const NOW = new Date("2026-09-03T13:00:00Z");
@@ -51,5 +51,22 @@ describe("formatPhone", () => {
   it("leaves anything else alone rather than guessing", () => {
     expect(formatPhone("+44 20 7946 0958")).toBe("+44 20 7946 0958");
     expect(formatPhone("")).toBe("");
+    // Whitespace is not a number either. It comes back untouched, which is
+    // why callers check `present` before they build a tel: link from it.
+    expect(formatPhone("   ")).toBe("   ");
+  });
+});
+
+describe("present", () => {
+  it("passes real text through, trimmed", () => {
+    expect(present("Bozeman")).toBe("Bozeman");
+    expect(present(" Bozeman ")).toBe("Bozeman");
+  });
+
+  it("treats null, empty and whitespace-only as absent", () => {
+    expect(present(null)).toBeNull();
+    expect(present(undefined)).toBeNull();
+    expect(present("")).toBeNull();
+    expect(present("   ")).toBeNull();
   });
 });

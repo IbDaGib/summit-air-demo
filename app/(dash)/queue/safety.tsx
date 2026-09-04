@@ -11,7 +11,7 @@ import type { Hazard } from "@/agent/policy/types";
 import type { SafetyIncidentRow } from "../_data/metrics";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { formatPhone } from "./_format";
+import { formatPhone, present } from "./_format";
 import { Dash, HeadRow, Panel, Th, When } from "./cells";
 
 /**
@@ -72,20 +72,25 @@ export function Safety({ items, now }: { items: SafetyIncidentRow[]; now: Date }
               <TableCell>
                 <Badge variant="destructive">{hazardLabel(i.hazard)}</Badge>
               </TableCell>
-              <TableCell>{i.town ?? <Dash />}</TableCell>
+              <TableCell>{present(i.town) ?? <Dash />}</TableCell>
               <TableCell className="pr-4 font-mono tabular-nums">
-                {i.phone ? (
-                  <a href={`tel:${i.phone}`} className="underline-offset-4 hover:underline">
-                    {formatPhone(i.phone)}
-                  </a>
-                ) : (
-                  <Dash />
-                )}
+                <PhoneCell phone={present(i.phone)} />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </Panel>
+  );
+}
+
+/** A number to dial, or a dash. Never a tel: link with nothing behind it. */
+function PhoneCell({ phone }: { phone: string | null }) {
+  return phone ? (
+    <a href={`tel:${phone}`} className="underline-offset-4 hover:underline">
+      {formatPhone(phone)}
+    </a>
+  ) : (
+    <Dash />
   );
 }

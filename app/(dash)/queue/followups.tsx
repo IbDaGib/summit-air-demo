@@ -7,7 +7,7 @@ import type { FollowupItem } from "../_data/metrics";
 import type { Priority } from "../_data/types";
 import { PriorityChip, ramp } from "../_ui/priority";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { formatPhone } from "./_format";
+import { formatPhone, present } from "./_format";
 import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
 
 const TIERS: ReadonlySet<string> = new Set<Priority>(["P0", "P1", "P2", "P3"]);
@@ -60,6 +60,7 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
             // component or an onClick on the <tr>. Only the caller is
             // underlined; one affordance per row is enough.
             const href = `/calls/${f.callId}`;
+            const summary = present(f.summary);
             return (
               <TableRow key={f.callId}>
                 <TableCell className="relative pl-4 text-muted-foreground">
@@ -79,7 +80,7 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <Link href={href} className="block">
-                    {f.town ?? <Dash />}
+                    {present(f.town) ?? <Dash />}
                   </Link>
                 </TableCell>
                 <TableCell>
@@ -89,12 +90,12 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
                 </TableCell>
                 <TableCell className="max-w-[32ch] whitespace-normal">
                   <Link href={href} className="block">
-                    {f.reason ?? <Dash />}
+                    {present(f.reason) ?? <Dash />}
                   </Link>
                 </TableCell>
                 <TableCell className="max-w-[48ch] whitespace-normal pr-4 text-muted-foreground">
                   <Link href={href} className="block">
-                    {f.summary ? <span className="line-clamp-2">{f.summary}</span> : <Dash />}
+                    {summary ? <span className="line-clamp-2">{summary}</span> : <Dash />}
                   </Link>
                 </TableCell>
               </TableRow>
