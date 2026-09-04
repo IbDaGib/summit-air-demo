@@ -6,11 +6,14 @@
  * from us; the tables are rendered on the server and passed through as slots,
  * so nothing here ships row data to the browser as JavaScript.
  */
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getCallbackQueue,
   getFollowupQueue,
+  getResolvedFollowupQueue,
   getSafetyIncidents,
   getTechUtilization,
 } from "../_data/metrics";
@@ -24,21 +27,29 @@ import { Utilization } from "./utilization";
 // A work queue is never stale on purpose. Nothing about it may be prerendered.
 export const dynamic = "force-dynamic";
 
-export default async function QueuePage() {
+export default async function QueuePage({ searchParams }: PageProps<"/queue">) {
+  // `?resolved=1` widens the follow-up fetch to rows a person already closed.
+  // Anything else — absent, "0", garbage — is the default: open rows only.
+  const { resolved } = await searchParams;
+  const showResolved = resolved === "1";
+
   // One past the cap, so the badge can tell "exactly 50" from "50 and more".
-  const [followups, callbacks, incidents, techs] = await Promise.all([
-    getFollowupQueue(LIMIT + 1),
-    getCallbackQueue(LIMIT + 1),
-    getSafetyIncidents(LIMIT + 1),
-    getTechUtilization(),
-  ]);
+  const [followups, resolvedFollowups, callbacks, incidents, techs] =
+    await Promise.all([
+      getFollowupQueue(LIMIT + 1),
+      showResolved ? getResolvedFollowupQueue(LIMIT) : Promise.resolve([]),
+      getCallbackQueue(LIMIT + 1),
+      getSafetyIncidents(LIMIT + 1),
+      getTechUtilization(),
+    ]);
   // One clock for every "3m ago" on the page, so two rows never disagree.
   const now = new Date();
   const shownCallbacks = callbacks.slice(0, LIMIT);
-  // Counted over the rows on screen, so the badge and the table agree.
-  // Count over the unsliced fetch: metrics orders unresolved first, so ≤50 open is
-  // exact and ≥51 reads 50+. Counting the sliced list capped it at 50 — the bug
-  // this whole change exists to remove.
+  // Badges count open rows over the unsliced fetch: metrics orders unresolved
+  // first, so ≤50 open is exact and ≥51 reads 50+. Counting the sliced list
+  // capped it at 50 — the bug this comment exists to keep dead. With resolved
+  // rows shown, the follow-up badge still counts only what is left to do.
+  const openFollowups = followups.length;
   const openCallbacks = callbacks.filter((c) => !c.resolved).length;
 
   return (
@@ -54,7 +65,7 @@ export default async function QueuePage() {
         <TabsList variant="line">
           <TabsTrigger value="followups">
             Needs a human
-            <Count n={followups.length} />
+            <Count n={openFollowups} />
           </TabsTrigger>
           <TabsTrigger value="callbacks">
             Callbacks
@@ -65,8 +76,23 @@ export default async function QueuePage() {
             <Count n={incidents.length} />
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="followups">
-          <Followups items={sortFollowups(followups.slice(0, LIMIT))} now={now} />
+        <TabsContent value="followups" className="space-y-2">
+          <div className="flex justify-end">
+            {/* A link, not state: the choice lives in the URL and survives a reload. */}
+            <Button variant="outline" size="sm" asChild>
+              <Link href={showResolved ? "/queue" : "/queue?resolved=1"}>
+                {showResolved ? "Hide resolved" : "Show resolved"}
+              </Link>
+            </Button>
+          </div>
+          <Followups
+            items={sortFollowups([
+              ...followups.slice(0, LIMIT),
+              ...resolvedFollowups,
+            ])}
+            now={now}
+            showingResolved={showResolved}
+          />
         </TabsContent>
         <TabsContent value="callbacks">
           <Callbacks items={shownCallbacks} now={now} />
