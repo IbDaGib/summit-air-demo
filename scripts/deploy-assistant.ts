@@ -29,11 +29,14 @@ const assistant = {
 
   // Static so the phone answers instantly. An LLM-generated greeting leaves a
   // second of dead air before the caller hears anything.
-  // Leading "Hi there" is deliberate padding: the first ~300ms of audio is
-  // clipped on some carrier paths, and it ate "What's" on 2 of 4 test calls.
-  // Now a throwaway greeting absorbs the clip instead of real content.
+  // Two things here are deliberate. The leading "Hi there" is disposable padding:
+  // the first ~300ms of audio is clipped on some carrier paths and it ate
+  // "What's" on 2 of 4 test calls, so a throwaway greeting absorbs the clip
+  // instead of real content. And this string is spoken verbatim — authoring
+  // notes pasted in here get read out loud, which happened once with a block of
+  // seasonal variants the caller heard in full.
   firstMessage:
-    "Hi there — thanks for calling Summit Air. This is Casey, I'm an AI assistant and this call may be recorded. What's going on with your system today?",
+    "Hi there — thanks for calling Summit Air, this is Casey. Quick heads up, I'm an AI assistant and this call is recorded. What's the system doing, or not doing?",
 
   model: {
     provider: "mistral",
