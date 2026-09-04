@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { listCalls } from "../../../(dash)/_data/client";
+import { listCalls, listCallsSince } from "../../../(dash)/_data/client";
 import { newerThan } from "./since";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +24,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   const since = new URL(req.url).searchParams.get("since");
-  const all = await listCalls();
-  const calls = newerThan(all, since);
+  const calls =
+    since && !Number.isNaN(Date.parse(since))
+      ? await listCallsSince(since)
+      : newerThan(await listCalls(), since);
   return NextResponse.json(
     { calls, fetchedAt: new Date().toISOString() },
     { headers: { "cache-control": "no-store" } },
