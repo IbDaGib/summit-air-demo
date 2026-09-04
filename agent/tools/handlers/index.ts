@@ -30,7 +30,7 @@ export function createHandlers(deps: HandlerDeps): ToolHandlers {
     find_slots: findSlots(deps),
     book_appointment: bookAppointment(deps),
     save_callback_request: saveCallbackRequest(deps),
-    end_call: endCall(deps),
+    record_call_outcome: endCall(deps),
   };
 }
 

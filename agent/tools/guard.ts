@@ -50,7 +50,7 @@ export function safetyBackstop(
   toolName: string,
   args: Record<string, unknown>,
 ): { hazard: Exclude<Hazard, "none">; town?: string } | null {
-  if (toolName === "escalate_emergency" || toolName === "end_call") return null;
+  if (toolName === "escalate_emergency" || toolName === "record_call_outcome") return null;
 
   const declared = args.hazard;
   if (typeof declared === "string" && declared !== "none") {

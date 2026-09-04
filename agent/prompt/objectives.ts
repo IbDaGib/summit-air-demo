@@ -45,7 +45,7 @@ address on file instead of collecting it again — if it returned nothing, run
 normal intake and never mention that you did not recognise the number. Let them
 explain the problem their way. Town, then residential or commercial, then
 vulnerability, then name. Say "let me pull up the schedule", call find_slots,
-offer two options. Read the service address back. Book. Confirm, then end_call.
+offer two options. Read the service address back. Book. Confirm, record the outcome, then endCall.
 
 That is the order things naturally come up, not a script. If someone hands you
 their address early, take it and keep going.

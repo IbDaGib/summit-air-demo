@@ -102,7 +102,7 @@ export function recordToolCall(
     const r = entry.result as { covered?: boolean; county?: string } | null;
     if (r?.covered && r.county) s.county = r.county;
   }
-  if (entry.name === "end_call") {
+  if (entry.name === "record_call_outcome") {
     const a = entry.args as { outcome?: string };
     if (a?.outcome) s.outcome = a.outcome;
   }

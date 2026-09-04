@@ -283,7 +283,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { status: "saved", requestId: "cb-4471" },
       },
-      { name: "end_call", atSec: 93, ms: 4, args: { outcome: "escalated" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 93, ms: 4, args: { outcome: "escalated" }, result: { ok: true } },
     ],
   }),
 
@@ -401,7 +401,7 @@ export const CALLS: CallDetail[] = [
           spoken: "You're all set — a technician will be out to 412 Cottonwood Road in that window.",
         },
       },
-      { name: "end_call", atSec: 265, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 265, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
     ],
   }),
 
@@ -461,7 +461,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { instructions: ESCALATION_CO, incidentId: "inc-88209" },
       },
-      { name: "end_call", atSec: 138, ms: 3, args: { outcome: "escalated" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 138, ms: 3, args: { outcome: "escalated" }, result: { ok: true } },
     ],
   }),
 
@@ -572,7 +572,7 @@ export const CALLS: CallDetail[] = [
           spoken: "You're all set — a technician will be out to 212 East Main Street in that window.",
         },
       },
-      { name: "end_call", atSec: 201, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 201, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
     ],
   }),
 
@@ -650,7 +650,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { status: "confirmed", bookingId: "bk-9915", spoken: "You're all set — a technician will be out to 14 Jack Creek Road in that window." },
       },
-      { name: "end_call", atSec: 173, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 173, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
     ],
   }),
 
@@ -715,7 +715,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { status: "saved", requestId: "cb-4468" },
       },
-      { name: "end_call", atSec: 119, ms: 3, args: { outcome: "callback" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 119, ms: 3, args: { outcome: "callback" }, result: { ok: true } },
     ],
   }),
 
@@ -806,7 +806,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { status: "confirmed", bookingId: "bk-9908", spoken: "You're all set — a technician will be out to 721 Lone Peak Drive in that window." },
       },
-      { name: "end_call", atSec: 230, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 230, ms: 3, args: { outcome: "booked" }, result: { ok: true } },
     ],
   }),
 
@@ -880,7 +880,7 @@ export const CALLS: CallDetail[] = [
         },
         result: { status: "saved", requestId: "cb-4462" },
       },
-      { name: "end_call", atSec: 206, ms: 3, args: { outcome: "callback" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 206, ms: 3, args: { outcome: "callback" }, result: { ok: true } },
     ],
   }),
 
@@ -906,7 +906,7 @@ export const CALLS: CallDetail[] = [
     ],
     trace: [
       { name: "lookup_customer", atSec: 2, ms: 34, args: { phone: "+14065550129" }, result: null },
-      { name: "end_call", atSec: 21, ms: 3, args: { outcome: "no_action" }, result: { ok: true } },
+      { name: "record_call_outcome", atSec: 21, ms: 3, args: { outcome: "no_action" }, result: { ok: true } },
     ],
   }),
 ];
