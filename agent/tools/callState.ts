@@ -15,7 +15,17 @@
  * a single call, which is its whole lifetime. Persisting to `calls` is the
  * correct fix and is logged in KNOWN_ISSUES.
  */
-type CallState = { escalated: boolean; callerPhone?: string; startedAt: number };
+type CallState = {
+  escalated: boolean;
+  callerPhone?: string;
+  startedAt: number;
+  /** Tier computed by policy during the call. Never re-derived afterwards. */
+  priority?: string;
+  facts?: Record<string, unknown>;
+  outcome?: string;
+  /** Every tool call, for the dashboard trace and for live debugging. */
+  trace: { name: string; args: unknown; result: unknown; ms: number; forced: boolean }[];
+};
 
 const STATE = new Map<string, CallState>();
 const TTL_MS = 30 * 60 * 1000;
@@ -29,7 +39,7 @@ export function get(callId: string): CallState {
   sweep();
   let s = STATE.get(callId);
   if (!s) {
-    s = { escalated: false, startedAt: Date.now() };
+    s = { escalated: false, startedAt: Date.now(), trace: [] };
     STATE.set(callId, s);
   }
   return s;
@@ -49,3 +59,26 @@ export function hasEscalated(callId: string): boolean {
 
 /** Tools that must never run after a life-safety escalation. */
 export const BLOCKED_AFTER_ESCALATION = new Set(["find_slots", "book_appointment"]);
+
+export function recordToolCall(
+  callId: string,
+  entry: { name: string; args: unknown; result: unknown; ms: number; forced: boolean },
+) {
+  const s = get(callId);
+  s.trace.push(entry);
+  // The tier is decided once, by policy, during the call. Post-call extraction
+  // deliberately does not re-derive it from prose.
+  if (entry.name === "assess_situation") {
+    const r = entry.result as { tier?: string } | null;
+    if (r?.tier) s.priority = r.tier;
+    s.facts = entry.args as Record<string, unknown>;
+  }
+  if (entry.name === "end_call") {
+    const a = entry.args as { outcome?: string };
+    if (a?.outcome) s.outcome = a.outcome;
+  }
+}
+
+export function snapshot(callId: string): CallState | undefined {
+  return STATE.get(callId);
+}

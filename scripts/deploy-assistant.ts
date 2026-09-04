@@ -13,11 +13,16 @@ import { TOOL_LIST } from "../agent/tools/schemas";
 
 const API = "https://api.vapi.ai";
 const KEY = process.env.VAPI_API_KEY;
-const SERVER_URL = process.env.VAPI_SERVER_URL; // e.g. https://<vercel>/api/vapi/tools
+// One origin, two endpoints. Tool calls and lifecycle events are different
+// concerns and were previously both pointed at /tools, which is why status
+// updates showed up as stray POSTs in the tool webhook log.
+const BASE = (process.env.VAPI_BASE_URL ?? "").replace(/\/+$/, "");
+const SERVER_URL = BASE ? `${BASE}/api/vapi/tools` : undefined;
+const EVENTS_URL = BASE ? `${BASE}/api/vapi/events` : undefined;
 const SECRET = process.env.VAPI_WEBHOOK_SECRET;
 
 if (!KEY) throw new Error("VAPI_API_KEY is not set");
-if (!SERVER_URL) throw new Error("VAPI_SERVER_URL is not set");
+if (!BASE) throw new Error("VAPI_BASE_URL is not set (origin only, no path)");
 
 const assistant = {
   name: "Summit Air — inbound",
@@ -67,8 +72,12 @@ const assistant = {
 
   endCallFunctionEnabled: true,
   backgroundSound: "office",
-  serverUrl: SERVER_URL,
-  serverUrlSecret: SECRET,
+
+  // Lifecycle events go here, not to the tool endpoint. end-of-call-report is
+  // the one that matters: it carries the transcript, timings, cost and
+  // recording URL, and without it nothing survives the call.
+  server: { url: EVENTS_URL, secret: SECRET },
+  serverMessages: ["end-of-call-report", "status-update"],
 };
 
 async function main() {
