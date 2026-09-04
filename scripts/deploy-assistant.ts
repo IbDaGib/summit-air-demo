@@ -14,7 +14,7 @@ const API = "https://api.vapi.ai";
 const KEY = process.env.VAPI_API_KEY;
 
 if (!KEY) throw new Error("VAPI_API_KEY is not set");
-if (!BASE) throw new Error("VAPI_BASE_URL is not set (origin only, no path)");
+if (!SERVER_URL) throw new Error("VAPI_BASE_URL is not set (origin only, no path)");
 
 
 async function main() {
