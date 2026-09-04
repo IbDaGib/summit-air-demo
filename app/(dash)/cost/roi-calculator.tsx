@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { count, pct, usd, usdPerUnit } from "../_ui/format";
-import { type FieldKind, parseFieldValue, toPercent } from "./fields";
+import { type FieldKind, parseFieldValue, toPercent, tenth } from "./fields";
 import { computeRoi, type RoiInputs } from "./roi";
 
 type EditableKey = Exclude<keyof RoiInputs, "agentCostPerCallUsd" | "afterHoursShare">;
@@ -45,15 +45,17 @@ const UNIT: Record<FieldKind, string> = { count: "calls", percent: "%", usd: "US
  * 82.5 → "82.5"; 150 → "150". Bookings and missed calls are rates, not tallies:
  * shown to the tenth so "82.5 × $425" multiplies out to the revenue beside it.
  */
-const tenth = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
 export function RoiCalculator({
   initial,
   measured = true,
+  measuredAfterHours = measured,
 }: {
   initial: RoiInputs;
   /** False when the seeds are fallbacks rather than real calls; the badges say so. */
   measured?: boolean;
+  /** Whether the after-hours figure comes from real calls (independent of cost). */
+  measuredAfterHours?: boolean;
 }) {
   const [inputs, setInputs] = useState<RoiInputs>(initial);
   const out = computeRoi(inputs);
@@ -110,8 +112,8 @@ export function RoiCalculator({
             />
             <MeasuredRow
               label="Calls after hours"
-              value={measured ? pct(initial.afterHoursShare * 100) : "—"}
-              badge={measured ? "measured" : "no calls yet"}
+              value={measuredAfterHours ? pct(initial.afterHoursShare * 100) : "—"}
+              badge={measuredAfterHours ? "measured" : "no calls yet"}
             />
           </dl>
         </CardContent>

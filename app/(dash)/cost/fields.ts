@@ -28,3 +28,8 @@ export function parseFieldValue(kind: FieldKind, raw: string): number {
   const n = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
   return kind === "percent" ? fromPercent(n) : n;
 }
+
+/** Integer when whole, one decimal when fractional — "83" or "82.5". Display only. */
+export function tenth(n: number): string {
+  return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+}

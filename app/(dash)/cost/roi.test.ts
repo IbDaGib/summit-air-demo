@@ -39,7 +39,7 @@ describe("computeRoi with the default assumptions", () => {
     );
   });
 
-  it("pays for itself after ceil(ticket / cost per call) calls", () => {
+  it("paybackCalls is how many calls one recovered ticket funds: ceil(ticket / cost per call)", () => {
     expect(out.paybackCalls).toBe(Math.ceil(425 / 0.1));
     expect(out.paybackCalls).toBe(4250);
   });

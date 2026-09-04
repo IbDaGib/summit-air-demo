@@ -27,6 +27,8 @@ export default async function CostPage() {
 
   // A call with no recorded cost is not a measurement of what a call costs.
   const measured = summary.calls > 0 && summary.avgPerCallUsd > 0;
+  // After-hours share has its own data; a call with no recorded cost must not hide it.
+  const measuredAfterHours = afterHours.total > 0;
   const initial: RoiInputs = {
     ...DEFAULT_ROI_INPUTS,
     // Seeded at the precision the calculator displays (a tenth of a cent), so
@@ -49,7 +51,7 @@ export default async function CostPage() {
 
       <CostBreakdown summary={summary} />
 
-      <RoiCalculator initial={initial} measured={measured} />
+      <RoiCalculator initial={initial} measured={measured} measuredAfterHours={measuredAfterHours} />
 
       <Card>
         <CardHeader>

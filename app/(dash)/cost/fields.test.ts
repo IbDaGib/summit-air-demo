@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fromPercent, parseFieldValue, toPercent } from "./fields";
+import { fromPercent, parseFieldValue, toPercent, tenth } from "./fields";
 
 describe("parseFieldValue", () => {
   it("treats an emptied field as zero, not as 'keep the old value'", () => {
@@ -64,4 +64,10 @@ describe("fromPercent", () => {
       expect(fromPercent(toPercent(rate))).toBe(rate);
     }
   });
+});
+
+describe("tenth", () => {
+  it("shows a whole number without a decimal", () => expect(tenth(83)).toBe("83"));
+  it("keeps one decimal when fractional", () => expect(tenth(82.5)).toBe("82.5"));
+  it("rounds to one decimal, grouped", () => expect(tenth(1234.56)).toBe("1,234.6"));
 });
