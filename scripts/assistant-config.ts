@@ -24,13 +24,13 @@ export const assistant = {
 
   // Static so the phone answers instantly. An LLM-generated greeting leaves a
   // second of dead air before the caller hears anything.
-  // the first ~300ms of audio is clipped on some carrier paths and it ate
-  // "What's" on 2 of 4 test calls, so a throwaway greeting absorbs the clip
-  // instead of real content. And this string is spoken verbatim — authoring
-  // notes pasted in here get read out loud, which happened once with a block of
-  // seasonal variants the caller heard in full.
+  //
+  // This string is spoken verbatim. Authoring notes pasted in here get read out
+  // loud — it happened once with a block of seasonal variants the caller heard
+  // in full.
+  //
   // "Hi there" is just a greeting. It was added as padding against a supposed
-  // ~300ms audio clip that "ate" words on early calls — but that evidence came
+  // ~300ms audio clip that "ate" words on early calls, but that evidence came
   // from Vapi's transcript of the agent's own speech, which drops words the
   // caller actually hears (a caller heard the full sentence while the log showed
   // it truncated). There was no clip. Kept because it sounds fine, not because
