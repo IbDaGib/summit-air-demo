@@ -13,31 +13,33 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { listBookings, listTechs } from "../_data/client";
 import type { Booking, Tech } from "../_data/types";
 import { ramp, RampLegend } from "../_ui/priority";
-import {
-  arrivalWindow,
-  denverDayKey,
-  denverInstant,
-  denverMonthDay,
-  denverWeekday,
-} from "../_ui/time";
+import { arrivalWindow, denverDayKey, denverMonthDay, denverWeekday } from "../_ui/time";
+import { parseWeekParam, weekDays, weekRange, weekRelation } from "./week";
 
 export const dynamic = "force-dynamic";
 
-const DAYS = 5;
-
-export default async function SchedulePage() {
+/**
+ * One Denver week, Mon–Fri, chosen by `?week=YYYY-MM-DD` (a Monday). Anything
+ * else in that param — missing, mistyped, a Tuesday — means this week. The
+ * grid is the same shape whatever the week holds, so an empty week reads as
+ * "nothing booked", never as "nothing loaded".
+ */
+export default async function SchedulePage({ searchParams }: PageProps<"/schedule">) {
   const now = new Date();
-  // Day 0 is today in Denver; the window runs to the end of day 4.
-  const from = denverInstant(0, 0, now);
-  const to = denverInstant(DAYS, 0, now);
+  const { week } = await searchParams;
+  const weekKey = parseWeekParam(week, now);
+
+  // Mon 00:00 -> Sat 00:00 Denver, resolved at each instant so DST weeks stay honest.
+  const { from, to } = weekRange(weekKey);
 
   const [techs, bookings] = await Promise.all([
     listTechs(),
     listBookings({ from: from.toISOString(), to: to.toISOString() }),
   ]);
 
-  const days = Array.from({ length: DAYS }, (_, i) => denverInstant(i, 12, now));
+  const days = weekDays(weekKey);
   const dayKeys = days.map((d) => denverDayKey(d));
+  // Only lights a column when today actually sits inside the shown week.
   const todayKey = denverDayKey(now);
 
   // techId -> dayKey -> bookings, already sorted by start time upstream.
@@ -54,7 +56,8 @@ export default async function SchedulePage() {
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="text-base font-semibold tracking-tight">Schedule</h1>
         <span className="text-sm text-muted-foreground tabular-nums">
-          Next {DAYS} days · {techs.length} technicians · all times America/Denver
+          Week of {denverMonthDay(days[0].toISOString())} · {weekRelation(weekKey, now)} ·{" "}
+          {techs.length} technicians · all times America/Denver
         </span>
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
           {bookings.length} booked windows. A technician cannot hold two overlapping windows —
@@ -113,7 +116,7 @@ export default async function SchedulePage() {
             {techs.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={DAYS + 1}
+                  colSpan={days.length + 1}
                   className="py-16 text-center text-sm whitespace-normal text-muted-foreground"
                 >
                   No technicians on the roster, so there is nothing to schedule against.
