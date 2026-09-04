@@ -31,3 +31,4 @@ Written as I built. Feeds the self-critique in the demo.
   which is not worth adding to demo fixtures that are re-runnable by design.
   Greptile flagged this twice on PR #1 and it is a fair call — just not one worth
   spending the remaining time on.
+- [ ]
