@@ -1,19 +1,86 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
 /**
- * Placeholder so the route resolves and the nav is complete. A workspace
- * replaces this whole file — see prompts/round3/. Keep the route path.
+ * /queue — the page dispatch opens at 7am. Everything the agent could not
+ * finish and a person must pick up, hottest first.
+ *
+ * Server component. Tabs is a client component, but it only needs `children`
+ * from us; the tables are rendered on the server and passed through as slots,
+ * so nothing here ships row data to the browser as JavaScript.
  */
-export default function Page() {
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getCallbackQueue,
+  getFollowupQueue,
+  getSafetyIncidents,
+  getTechUtilization,
+} from "../_data/metrics";
+import { Callbacks } from "./callbacks";
+import { Followups } from "./followups";
+import { Safety } from "./safety";
+import { sortFollowups } from "./sort";
+
+// A work queue is never stale on purpose. Nothing about it may be prerendered.
+export const dynamic = "force-dynamic";
+
+const LIMIT = 50;
+
+export default async function QueuePage() {
+  const [followups, callbacks, incidents] = await Promise.all([
+    getFollowupQueue(LIMIT),
+    getCallbackQueue(LIMIT),
+    getSafetyIncidents(LIMIT),
+    getTechUtilization(),
+  ]);
+  // One clock for every "3m ago" on the page, so two rows never disagree.
+  const now = new Date();
+  const openCallbacks = callbacks.filter((c) => !c.resolved).length;
+
   return (
-    <div className="p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Needs a human</CardTitle>
-          <CardDescription>This page is being built. The route exists so the navigation is complete.</CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Nothing to show yet.</CardContent>
-      </Card>
+    <div className="flex flex-1 flex-col gap-4 p-5">
+      <div className="space-y-0.5">
+        <h1 className="text-base font-semibold tracking-tight">Needs a human</h1>
+        <p className="text-sm text-muted-foreground">
+          What the agent could not finish. Work top to bottom.
+        </p>
+      </div>
+
+      <Tabs defaultValue="followups">
+        <TabsList variant="line">
+          <TabsTrigger value="followups">
+            Needs a human
+            <Count n={followups.length} />
+          </TabsTrigger>
+          <TabsTrigger value="callbacks">
+            Callbacks
+            <Count n={openCallbacks} />
+          </TabsTrigger>
+          <TabsTrigger value="safety">
+            Safety incidents
+            <Count n={incidents.length} />
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="followups">
+          <Followups items={sortFollowups(followups)} now={now} />
+        </TabsContent>
+        <TabsContent value="callbacks">
+          <Callbacks items={callbacks} now={now} />
+        </TabsContent>
+        <TabsContent value="safety">
+          <Safety items={incidents} now={now} />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+/** Count in a tab trigger. Zero is a legitimate count, so it is shown, quietly. */
+function Count({ n }: { n: number }) {
+  return (
+    <Badge
+      variant={n > 0 ? "secondary" : "outline"}
+      className="h-4 min-w-5 px-1.5 text-[10px] tabular-nums"
+    >
+      {n}
+    </Badge>
   );
 }
