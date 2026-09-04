@@ -48,6 +48,49 @@ describe("lookup_customer", () => {
   });
 });
 
+describe("lookup_customer must not leak on an unverified number", () => {
+  // Confirmed on a live call: the model invented `phone: "unknown"`, which
+  // normalised to "", and endsWith("") matched a real customer — so the agent
+  // greeted a stranger as "Dave, is this you at 412 Cottonwood Road?" and read
+  // out his gate code. Identity now comes from the carrier at the route
+  // boundary; this is the handler-side guard behind it.
+  it.each(["unknown", "", "N/A", "123", "caller", "+1406555011"])(
+    "returns null for %j",
+    async (bad) => {
+      const h = createHandlers(deps(createInMemoryRepository()));
+      expect(await h.lookup_customer({ phone: bad })).toBeNull();
+    },
+  );
+
+  it("still matches a full national number", async () => {
+    const h = createHandlers(deps(createInMemoryRepository()));
+    expect((await h.lookup_customer({ phone: "+14065550118" }))?.name).toBe("Dave Whitaker");
+  });
+
+  it("withholds property-access notes from the model", async () => {
+    const h = createHandlers(deps(createInMemoryRepository()));
+    const found = await h.lookup_customer({ phone: "+14065550118" });
+    expect(found?.name).toBe("Dave Whitaker");
+    expect(found?.accessNotes).toBeUndefined();
+    // The gate code must not appear anywhere in what the model receives.
+    expect(JSON.stringify(found)).not.toContain("4412");
+  });
+
+  it("echoes the carrier number back so the agent can confirm it aloud", async () => {
+    const h = createHandlers(deps(createInMemoryRepository()));
+    expect((await h.lookup_customer({ phone: "+14065550118" }))?.callerPhone).toBe("+14065550118");
+  });
+
+  it("masks the number in its own log line", async () => {
+    const logs = vi.spyOn(console, "log").mockImplementation(() => {});
+    const h = createHandlers(deps(createInMemoryRepository()));
+    await h.lookup_customer({ phone: "+14065550118" });
+    const written = logs.mock.calls.flat().join(" ");
+    expect(written).toContain("****0118");
+    expect(written).not.toContain("4065550118");
+  });
+});
+
 describe("check_service_area", () => {
   it("covers a town and returns its canonical spelling", async () => {
     const h = createHandlers(deps(createInMemoryRepository()));
@@ -130,6 +173,24 @@ describe("escalate_emergency", () => {
     const r = await h.escalate_emergency({ hazard: "co_alarm" });
     expect(r.instructions).toMatch(/fresh air/i);
     expect(r.incidentId).toMatch(/^incident-local-/);
+  });
+
+  it("masks the callback number when the incident cannot be recorded", async () => {
+    const repo = createInMemoryRepository();
+    repo.recordSafetyIncident = async () => {
+      throw new Error("supabase unreachable");
+    };
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const h = createHandlers(deps(repo));
+    await h.escalate_emergency({
+      hazard: "gas_smell",
+      town: "Bozeman",
+      callbackPhone: "+14065550118",
+    });
+    const written = errors.mock.calls.flat().join(" ");
+    expect(written).toContain("safety_incident_unrecorded");
+    expect(written).toContain("****0118");
+    expect(written).not.toContain("4065550118");
   });
 
   it("has a distinct script per hazard", async () => {
@@ -313,6 +374,55 @@ describe("book_appointment", () => {
     const r = await h.book_appointment(build({ slotId: slot.slotId }));
     expect(r.status).toBe("error");
     expect(r.message).toMatch(/save_callback_request/);
+  });
+});
+
+describe("access notes reach the ticket without reaching the model", () => {
+  const firstSlotFor = async (repo: DispatchRepository) => {
+    const h = createHandlers(deps(repo));
+    const { slots } = await h.find_slots({ town: "Bozeman", priority: "P2" });
+    return slots[0];
+  };
+
+  it("reattaches the notes on file when the agent supplied none", async () => {
+    const repo = createInMemoryRepository();
+    const slot = await firstSlotFor(repo);
+    let written: string | undefined = "unset";
+    repo.createBooking = async (b) => {
+      written = b.accessNotes;
+      return { status: "confirmed", bookingId: "x" };
+    };
+    const h = createHandlers(deps(repo));
+    await h.book_appointment(build({ slotId: slot.slotId }));
+    expect(written).toBe("Gate code 4412, dog in the yard");
+  });
+
+  it("prefers what the agent collected on the call", async () => {
+    const repo = createInMemoryRepository();
+    const slot = await firstSlotFor(repo);
+    let written: string | undefined = "unset";
+    repo.createBooking = async (b) => {
+      written = b.accessNotes;
+      return { status: "confirmed", bookingId: "x" };
+    };
+    const h = createHandlers(deps(repo));
+    await h.book_appointment(build({ slotId: slot.slotId, accessNotes: "Round the back now" }));
+    expect(written).toBe("Round the back now");
+  });
+
+  it("does not drag another property's gate code onto a different address", async () => {
+    const repo = createInMemoryRepository();
+    const slot = await firstSlotFor(repo);
+    let written: string | undefined = "unset";
+    repo.createBooking = async (b) => {
+      written = b.accessNotes;
+      return { status: "confirmed", bookingId: "x" };
+    };
+    const h = createHandlers(deps(repo));
+    await h.book_appointment(
+      build({ slotId: slot.slotId, addressLine: "9 Somewhere Else Avenue" }),
+    );
+    expect(written).toBeUndefined();
   });
 });
 

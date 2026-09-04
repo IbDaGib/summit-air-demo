@@ -154,6 +154,60 @@ describe("computePriority", () => {
     expect(r.blockBooking).toBe(false);
   });
 
+  describe("a system that is running but not keeping up (confirmed on a live call)", () => {
+    const notKeepingUp = (over: Partial<SituationFacts> = {}) =>
+      facts({
+        issue: "poor_performance",
+        systemDown: false,
+        vulnerableOccupant: true,
+        occupantDetail: "grandmother, 84, lives alone",
+        ...over,
+      });
+
+    it("is not routine when a vulnerable occupant is on site", () => {
+      const r = computePriority(notKeepingUp(), WEEKDAY_MORNING);
+      expect(r.tier).not.toBe("P3");
+      expect(r.tier).toBe("P2");
+      expect(r.reason).toMatch(/not keeping up/i);
+      expect(r.reason).toMatch(/grandmother, 84/);
+    });
+
+    it("is same-day when it is also freezing", () => {
+      const r = computePriority(notKeepingUp({ outdoorTempF: 12 }), WEEKDAY_MORNING);
+      expect(r.tier).toBe("P1");
+      expect(r.reason).toMatch(/12°F/);
+    });
+
+    it("applies to a no_heat call the caller says is only partial", () => {
+      expect(computePriority(notKeepingUp({ issue: "no_heat" }), WEEKDAY_MORNING).tier).toBe("P2");
+      expect(
+        computePriority(notKeepingUp({ issue: "no_heat", outdoorTempF: 20 }), WEEKDAY_MORNING).tier,
+      ).toBe("P1");
+    });
+
+    it("stays P3 when nobody vulnerable is on site", () => {
+      expect(
+        computePriority(notKeepingUp({ vulnerableOccupant: false }), WEEKDAY_MORNING).tier,
+      ).toBe("P3");
+    });
+
+    it("does not reach past a hazard or a downed system", () => {
+      expect(computePriority(notKeepingUp({ hazard: "co_alarm" }), WEEKDAY_MORNING).tier).toBe("P0");
+      expect(
+        computePriority(
+          notKeepingUp({ issue: "no_heat", systemDown: true, outdoorTempF: 12 }),
+          WEEKDAY_MORNING,
+        ).reason,
+      ).toMatch(/Heat is out/);
+    });
+
+    it("does not promote a routine tune-up just because someone vulnerable lives there", () => {
+      expect(
+        computePriority(notKeepingUp({ issue: "maintenance" }), WEEKDAY_MORNING).tier,
+      ).toBe("P3");
+    });
+  });
+
   describe("seasonality comes from temperature, never the calendar", () => {
     const noHeatFreezing = facts({ issue: "no_heat", systemDown: true, outdoorTempF: 12 });
     const noHeatMild = facts({ issue: "no_heat", systemDown: true, outdoorTempF: 55 });

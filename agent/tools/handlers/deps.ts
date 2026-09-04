@@ -15,7 +15,25 @@ export interface HandlerDeps {
   now: () => Date;
 }
 
-/** Structured, greppable, and safe to ship to a log drain — no PII beyond what dispatch already stores. */
+/**
+ * Mask a phone number for the operational log stream.
+ *
+ * Keeps the last four digits, which is enough to correlate a log line with a
+ * call, and drops the rest. Nothing is lost: Vapi already holds the carrier
+ * number against the call record, so an incident can still be traced back to a
+ * person — just not from the log drain alone.
+ *
+ * Greptile flagged unredacted callback numbers in the escalation failure log on
+ * PR #2. This is the one helper every log site goes through.
+ */
+export function maskPhone(phone: string | undefined): string | undefined {
+  if (!phone) return undefined;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return "****";
+  return `****${digits.slice(-4)}`;
+}
+
+/** Structured, greppable, and safe to ship to a log drain — phone numbers masked. */
 export function logEvent(event: string, fields: Record<string, unknown>): void {
   console.log(JSON.stringify({ evt: event, ...fields }));
 }

@@ -28,9 +28,17 @@ export function saveCallbackRequest(deps: HandlerDeps): ToolHandlers["save_callb
     }
 
     const requestId = `callback-log-${deps.now().getTime()}`;
+    // The only log line in the codebase that carries an unmasked phone number,
+    // and it is deliberate: the write failed, so this line IS the lead. Masking
+    // it would mean telling a caller someone will ring them back and then
+    // having no way to do it. Tagged so a log drain can route or scrub it.
     logFailure("callback_request_log_only", {
       requestId,
-      ...input,
+      pii: "phone",
+      customerName: input.customerName,
+      phone: input.phone,
+      reason: input.reason,
+      notes: input.notes,
       note: "Not persisted to callback_requests. This log line IS the lead — replay it.",
     });
     return { status: "saved", requestId };

@@ -117,6 +117,33 @@ export function computePriority(facts: SituationFacts, now: Date): PriorityResul
     };
   }
 
+  // A system that is running but not keeping up, with someone in the house who
+  // cannot tolerate the cold. Confirmed on a live call, where "not keeping up"
+  // plus an 84-year-old occupant tiered P3 "Non-urgent service request" —
+  // exactly the gap logged in KNOWN_ISSUES after round one. `systemDown` is a
+  // binary the caller does not think in: a furnace holding a house at 52°F is
+  // not a working furnace.
+  if (
+    !facts.systemDown &&
+    facts.vulnerableOccupant &&
+    (facts.issue === "no_heat" || facts.issue === "poor_performance")
+  ) {
+    const who = occupant ? ` (${occupant})` : "";
+    return freezing
+      ? {
+          tier: "P1",
+          reason: `System is not keeping up with a vulnerable occupant on site${who} and the outdoor temperature at ${facts.outdoorTempF}°F.`,
+          responseTarget: sameDay,
+          blockBooking: false,
+        }
+      : {
+          tier: "P2",
+          reason: `System is not keeping up with a vulnerable occupant on site${who}.`,
+          responseTarget: "Next business day, ahead of routine work.",
+          blockBooking: false,
+        };
+  }
+
   // P2 — the system is down, but nothing compounds it.
   if (facts.systemDown) {
     return {

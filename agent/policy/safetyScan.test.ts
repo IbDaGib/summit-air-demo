@@ -60,6 +60,37 @@ describe("scanForHazard", () => {
     });
   });
 
+  describe("the four sentences from the round-2 brief", () => {
+    it.each([
+      ["No heat, and there's a gas smell in the basement", "gas_smell"],
+      ["The furnace won't fire, but I smell gas", "gas_smell"],
+      ["no cooling upstairs and I smell burning", "smoke_or_burning"],
+      ["there is no gas smell", "none"],
+    ])("%j -> %s", (utterance, expected) => {
+      expect(scanForHazard(utterance)).toBe(expected);
+    });
+  });
+
+  describe("hedging is not denial (Greptile, PR #2)", () => {
+    it.each([
+      "I have no idea why it smells like gas",
+      "I don't know why it smells like gas",
+      "no clue what it is but there's a burning smell",
+      "I can't tell if that's a gas smell or not",
+    ])("escalates on %j", (utterance) => {
+      expect(scanForHazard(utterance)).not.toBe("none");
+    });
+
+    it("still treats a real denial as a denial", () => {
+      // "no sign of" and "can't smell" negate the hazard itself, unlike "no
+      // idea why" — blanking these would evacuate a caller who just told us
+      // nothing is wrong.
+      expect(scanForHazard("there's no sign of a gas leak")).toBe("none");
+      expect(scanForHazard("I can't smell any gas")).toBe("none");
+      expect(scanForHazard("no smell of gas at all")).toBe("none");
+    });
+  });
+
   it("does not read the complaint 'no heat' as a denial of the hazard that follows", () => {
     // The regression that matters: "no" is in almost every one of these calls.
     expect(scanForHazard("No heat, and there's a gas smell in the basement")).toBe("gas_smell");
