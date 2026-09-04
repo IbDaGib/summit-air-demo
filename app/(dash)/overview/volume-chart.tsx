@@ -19,7 +19,7 @@ import type { DailyPoint } from "../_data/metrics";
 const config = {
   booked: { label: "Booked", color: "var(--chart-1)" },
   escalated: { label: "Escalated (safety)", color: "var(--chart-2)" },
-  other: { label: "Callback or no recorded outcome", color: "var(--chart-3)" },
+  other: { label: "Callback or no booking/escalation", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
