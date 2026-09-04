@@ -1,9 +1,10 @@
 /**
  * Formatters the queue page needs that do not exist in _ui/time.ts yet.
  *
- * TODO(swap): Workspace B owns the shared formatters (app/(dash)/_ui/format.ts).
- * Once that merges, delete this file and import `relativeTime` and
- * `formatPhone` from there. The signatures below are the contract.
+ * Deliberately local to /queue. The shared app/(dash)/_ui/format.ts has merged
+ * and is number formatters only (usd, usdPerUnit, pct, duration, count) — it has
+ * neither relativeTime nor formatPhone, so there is no swap to make. If a second
+ * page needs these, promote them to _ui/ then.
  *
  * Everything here is display-only and pinned to America/Denver, like the rest
  * of _ui/time.ts. Nothing derives urgency from a date.

@@ -42,12 +42,12 @@ export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) 
                 <When iso={c.createdAt} now={now} />
               </TableCell>
               <TableCell className="font-medium">
-                {c.customerName ?? <span className="font-normal text-muted-foreground italic">unknown</span>}
+                {present(c.customerName) ? c.customerName : <span className="font-normal text-muted-foreground italic">unknown</span>}
               </TableCell>
               <TableCell>
                 <PhoneCell phone={c.phone} />
               </TableCell>
-              <TableCell className="max-w-[32ch] whitespace-normal">{c.reason}</TableCell>
+              <TableCell className="max-w-[32ch] whitespace-normal">{present(c.reason) ? c.reason : <Dash />}</TableCell>
               <TableCell className="max-w-[40ch] whitespace-normal text-muted-foreground">
                 {present(c.notes) ? <span className="line-clamp-2">{c.notes}</span> : <Dash />}
               </TableCell>
