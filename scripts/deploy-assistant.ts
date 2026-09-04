@@ -29,7 +29,11 @@ const assistant = {
 
   model: {
     provider: "mistral",
-    model: "mistral-large-latest",
+    // Overridable so the tier/latency tradeoff is one env var, not a code edit.
+    // mistral-large-latest is NOT available on all Mistral subscription tiers —
+    // it returns 403 tier_not_allowed, which Vapi surfaces only as the opaque
+    // "pipeline-error-mistral-llm-failed". Verified working: small, medium.
+    model: process.env.VAPI_MODEL ?? "mistral-medium-latest",
     temperature: 0.4,
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
@@ -45,6 +49,8 @@ const assistant = {
   },
 
   transcriber: { provider: "deepgram", model: "nova-2", language: "en-US" },
+
+  voice: { provider: "11labs", voiceId: "sarah", model: "eleven_flash_v2_5" },
 
   // Endpointing is the real latency lever on a voice call — far more than model
   // choice. Too high and the agent feels slow; too low and it interrupts people

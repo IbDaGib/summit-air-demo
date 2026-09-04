@@ -106,6 +106,19 @@ function stubPriority(f: SituationFacts): PriorityResult {
       blockBooking: false,
     };
   }
+  // Demonstrated on a live call: "not keeping up" + elderly occupant tiered P3
+  // "Non-urgent service request". A house that cannot hold heat with a
+  // vulnerable occupant is not routine, whether or not the system is fully dead.
+  if (!f.systemDown && f.vulnerableOccupant && (f.issue === "no_heat" || f.issue === "poor_performance")) {
+    return {
+      tier: cold ? "P1" : "P2",
+      reason: cold
+        ? "System underperforming with a vulnerable occupant and freezing outdoor temperatures."
+        : "System underperforming with a vulnerable occupant in the home.",
+      responseTarget: cold ? "Same day." : "Next business day, prioritised.",
+      blockBooking: false,
+    };
+  }
   if (f.systemDown) {
     return {
       tier: "P2",
@@ -177,8 +190,13 @@ const dayName = (d: Date) =>
 
 export const stubHandlers: ToolHandlers = {
   async lookup_customer({ phone }) {
-    const digits = phone.replace(/\D/g, "").slice(-10);
-    return CUSTOMERS.find((c) => c.phone.replace(/\D/g, "").endsWith(digits)) ?? null;
+    // A model-supplied "unknown" used to normalise to "" — and endsWith("")
+    // is always true, so this returned a real customer's name, address and
+    // gate code to any caller. Require a full national number.
+    const digits = (phone ?? "").replace(/\D/g, "");
+    if (digits.length < 10) return null;
+    const last10 = digits.slice(-10);
+    return CUSTOMERS.find((c) => c.phone.replace(/\D/g, "").endsWith(last10)) ?? null;
   },
 
   async check_service_area({ town }): Promise<ServiceAreaResult> {

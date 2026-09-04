@@ -9,6 +9,13 @@
 import { NextResponse } from "next/server";
 import { stubHandlers } from "../../../../agent/tools/handlers/stub";
 import { safetyBackstop } from "../../../../agent/tools/guard";
+import {
+  BLOCKED_AFTER_ESCALATION,
+  hasEscalated,
+  markEscalated,
+  setCallerPhone,
+  get as getCallState,
+} from "../../../../agent/tools/callState";
 import type { ToolHandlers } from "../../../../agent/tools/schemas";
 
 // One-line swap once Workspace B merges the database-backed handlers.
@@ -42,7 +49,13 @@ export async function POST(req: Request) {
     }
   }
 
-  let body: { message?: { type?: string; toolCalls?: VapiToolCall[] } };
+  let body: {
+    message?: {
+      type?: string;
+      toolCalls?: VapiToolCall[];
+      call?: { id?: string; customer?: { number?: string } };
+    };
+  };
   try {
     body = await req.json();
   } catch {
@@ -52,11 +65,36 @@ export async function POST(req: Request) {
   const calls = body.message?.toolCalls ?? [];
   if (!calls.length) return NextResponse.json({ results: [] });
 
+  // The carrier establishes who is calling — not the model. On a live call the
+  // model invented `phone: "unknown"`, which matched a real customer and leaked
+  // their name, address and gate code to a stranger.
+  const callId = body.message?.call?.id ?? "unknown-call";
+  const callerPhone = body.message?.call?.customer?.number;
+  setCallerPhone(callId, callerPhone);
+
   const results = await Promise.all(
     calls.map(async (call) => {
       const name = call.function?.name ?? call.name ?? "";
       const args = parseArgs(call.function?.arguments ?? call.arguments);
       const started = Date.now();
+
+      // Caller identity is never taken from the model.
+      if (name === "lookup_customer") {
+        args.phone = getCallState(callId).callerPhone ?? "";
+      }
+
+      // Escalation is terminal for the rest of the call.
+      if (hasEscalated(callId) && BLOCKED_AFTER_ESCALATION.has(name)) {
+        console.warn(JSON.stringify({ evt: "blocked_after_escalation", callId, name }));
+        return {
+          toolCallId: call.id,
+          result: JSON.stringify({
+            error: "blocked",
+            guidance:
+              "This call has already been escalated as a life-safety emergency. Do not schedule anything. Confirm a callback number, tell the caller a technician will follow up once it is safe, and end the call.",
+          }),
+        };
+      }
 
       try {
         const fn = (handlers as unknown as Record<string, (a: unknown) => Promise<unknown>>)[name];
@@ -71,6 +109,8 @@ export async function POST(req: Request) {
           ? await handlers.escalate_emergency(forced)
           : await fn(args);
 
+        if (forced || name === "escalate_emergency") markEscalated(callId);
+
         console.log(
           JSON.stringify({
             evt: "tool_call",
@@ -81,7 +121,7 @@ export async function POST(req: Request) {
             result,
           }),
         );
-        return { toolCallId: call.id, result };
+        return { toolCallId: call.id, result: JSON.stringify(result ?? null) };
       } catch (err) {
         const message = err instanceof Error ? err.message : "tool failed";
         console.error(JSON.stringify({ evt: "tool_error", name, ms: Date.now() - started, message }));
@@ -89,11 +129,11 @@ export async function POST(req: Request) {
         // be able to recover inside the conversation and offer a callback.
         return {
           toolCallId: call.id,
-          result: {
+          result: JSON.stringify({
             error: message,
             guidance:
               "This tool is unavailable. Apologize briefly, take the caller's number, and call save_callback_request. Do not tell them an appointment is confirmed.",
-          },
+          }),
         };
       }
     }),
