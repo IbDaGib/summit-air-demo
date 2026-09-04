@@ -116,7 +116,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   book_appointment: {
     name: "book_appointment",
     description:
-      "Book a confirmed appointment in one of the slots returned by find_slots. Only call this once the caller has verbally agreed to a specific window and you have read their service address back to them. Do NOT call it on a call where escalate_emergency fired, do not call it with a slotId you did not receive from find_slots, and do not call it twice for one caller. If it returns a conflict, apologize briefly and offer the alternatives it returns.",
+      "Book a confirmed appointment in one of the slots returned by find_slots. Only call this once the caller has verbally agreed to a specific window and you have read their service address back to them. Do NOT call it on a call where escalate_emergency fired, do not call it with a slotId you did not receive from find_slots, and do not call it twice for one caller. When it returns status confirmed, your very next words to the caller must be the `spoken` field it returns, read back in your own cadence — the day, the window and the address. Do not call any other tool and do not say goodbye until the caller has heard that confirmation. If it returns a conflict, apologize briefly and offer the alternatives it returns.",
     parameters: obj(
       {
         slotId: { type: "string" },
@@ -153,7 +153,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   record_call_outcome: {
     name: "record_call_outcome",
     description:
-      "Record how this call ended, for the dispatch ticket. This does NOT hang up — it only writes the outcome. Call it once you have confirmed a booking, completed an escalation, or logged a callback, and then use the separate endCall function to actually end the call. Never call this twice.",
+      "Record how this call ended, for the dispatch ticket. This does NOT hang up — it only writes the outcome. Call it only after the caller has HEARD the result: for a booking, that means you have already told them the confirmed day, arrival window and address; for an escalation, the safety instructions; for a callback, that dispatch will ring them. Then use the separate endCall function to actually end the call. Never call this twice, and never say a filler phrase before it — on a real call the agent booked, skipped the confirmation, said 'this will just take a sec, goodbye' and hung up on a caller who never heard their appointment.",
     parameters: obj(
       { outcome: { type: "string", enum: ["booked", "escalated", "callback", "no_action"] } },
       ["outcome"],
