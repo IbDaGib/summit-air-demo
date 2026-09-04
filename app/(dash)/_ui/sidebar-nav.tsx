@@ -52,7 +52,15 @@ function Group({
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <SidebarMenuItem key={href}>
-                <SidebarMenuButton asChild isActive={active} tooltip={label}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active}
+                  tooltip={label}
+                  // The base variant already transitions width/height/padding for
+                  // the collapse; `cn` would let `transition-colors` replace it, so
+                  // the colour channels are appended to the same list instead.
+                  className="transition-[width,height,padding,color,background-color] duration-200"
+                >
                   <Link href={href}>
                     <Icon />
                     <span>{label}</span>
