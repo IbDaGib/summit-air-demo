@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { pct, usd, usdPerUnit } from "../_ui/format";
+import { type FieldKind, parseFieldValue, toPercent } from "./fields";
 import { computeRoi, type RoiInputs } from "./roi";
 
 type EditableKey = Exclude<keyof RoiInputs, "agentCostPerCallUsd" | "afterHoursShare">;
@@ -25,7 +26,7 @@ interface Field {
   key: EditableKey;
   label: string;
   /** Percent fields are shown 0–100 and stored 0–1; the others are stored as typed. */
-  kind: "count" | "percent" | "usd";
+  kind: FieldKind;
   step: number;
 }
 
@@ -38,12 +39,7 @@ const FIELDS: readonly Field[] = [
   { key: "avgInstallUsd", label: "Average install", kind: "usd", step: 500 },
 ];
 
-const UNIT: Record<Field["kind"], string> = { count: "calls", percent: "%", usd: "USD" };
-
-/** 0.25 → 25; 0.07 → 7 (not 7.000000000000001). */
-const toPercent = (rate: number) => Math.round(rate * 1000) / 10;
-/** 25 → 0.25, clamped to 0–100 first so a stray keystroke cannot exceed 100%. */
-const fromPercent = (p: number) => Math.min(Math.max(p, 0), 100) / 100;
+const UNIT: Record<FieldKind, string> = { count: "calls", percent: "%", usd: "USD" };
 
 const whole = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 /**
@@ -64,11 +60,9 @@ export function RoiCalculator({
   const out = computeRoi(inputs);
   const negative = out.netMonthlyUsd < 0;
 
-  function update(field: Field, raw: number) {
-    // An emptied field parses as NaN. Treat it as zero so the model still has a
-    // number, and never as "keep the old value", which would hide the edit.
-    const n = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-    const value = field.kind === "percent" ? fromPercent(n) : n;
+  function update(field: Field, raw: string) {
+    // Empty, negative and unparseable text all become zero — see fields.ts.
+    const value = parseFieldValue(field.kind, raw);
     setInputs((prev) => ({ ...prev, [field.key]: value }));
   }
 
@@ -97,7 +91,7 @@ export function RoiCalculator({
                       max={f.kind === "percent" ? 100 : undefined}
                       step={f.step}
                       defaultValue={display}
-                      onChange={(e) => update(f, e.target.valueAsNumber)}
+                      onChange={(e) => update(f, e.target.value)}
                       className="pr-12 tabular-nums"
                     />
                     <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-muted-foreground">
