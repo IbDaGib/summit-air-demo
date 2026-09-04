@@ -117,8 +117,11 @@ export default async function OverviewPage() {
 /**
  * The volume chart's legend, with counts for the same window. The chart's
  * "other" segment is split here into what it actually holds — callbacks, and
- * calls with no recorded outcome — because the second is not a failure of any
- * kind and must not be read as one.
+ * calls with no booking, callback or escalation. That second bucket is
+ * `CallVolume.unresolved`, which counts outcome NULL *or* 'no_action': calls
+ * still in progress (a live call sits here until it ends), calls the agent
+ * ended with no action, and calls from before outcome recording existed. None
+ * of those is a failure of any kind and must not be read as one.
  */
 function OutcomeLegend({ volume }: { volume: CallVolume }) {
   const items = [
@@ -127,9 +130,9 @@ function OutcomeLegend({ volume }: { volume: CallVolume }) {
     { swatch: "bg-chart-3", label: "Callback", n: volume.callback },
     {
       swatch: "bg-chart-3",
-      label: "No recorded outcome",
+      label: "No booking, callback or escalation",
       n: volume.unresolved,
-      title: "Ended without an outcome being recorded — dropped, timed out, or before outcome recording existed.",
+      title: "Still in progress, ended with no action, or ended before outcome recording existed.",
     },
   ];
   return (
