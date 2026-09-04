@@ -14,9 +14,28 @@ The custom endpoint gives full request-body control — prompt caching, effort t
 
 The agent core is provider-neutral, so this demonstrates the swap is a one-line change — which means a self-hosting path if calls must never leave the customer's infrastructure. Not a cost decision: the LLM is ~15%% of per-call cost, so the delta barely moves the total. Mitigated the weaker adversarial instruction-following with a deterministic safety backstop in code, which is better architecture regardless of model.
 
-## Claude as the eval judge, not Mistral
+## Mistral as the eval judge
 
-Different model family from the one generating, which avoids self-preference bias in LLM-as-judge scoring.
+One provider, one API key, one bill. The judge runs `magistral-medium-latest` —
+Mistral's reasoning model — while calls run `mistral-medium-latest`, so the judge
+is at least a different model from the one it scores.
+
+The honest limitation: judging within one model family risks self-preference
+bias, where a model rates its own family's output more favourably. Three things
+bound that exposure:
+
+1. **The judge never gates.** Only deterministic assertions fail the build — did
+   `escalate_emergency` fire, was `book_appointment` correctly refused, were all
+   required fields collected. Judge scores are a trend line, not a pass/fail, so
+   a biased score cannot let a broken build through.
+2. **The judge is blind.** It sees the transcript and the rubric, never the
+   system prompt or which model produced the turns, so it cannot reward
+   compliance with instructions it can read.
+3. **The rubric is behavioural, not aesthetic** — "did it read the address back",
+   not "was it good" — which leaves less room for taste to do the work.
+
+A cross-family judge would be stronger and is the first thing to change if these
+scores ever start gating anything.
 
 ## Priority computed in code, not by the model
 
