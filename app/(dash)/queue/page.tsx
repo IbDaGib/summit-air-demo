@@ -16,6 +16,7 @@ import {
 } from "../_data/metrics";
 import { Callbacks } from "./callbacks";
 import { Followups } from "./followups";
+import { LIMIT, countLabel } from "./limit";
 import { Safety } from "./safety";
 import { sortFollowups } from "./sort";
 import { Utilization } from "./utilization";
@@ -23,18 +24,19 @@ import { Utilization } from "./utilization";
 // A work queue is never stale on purpose. Nothing about it may be prerendered.
 export const dynamic = "force-dynamic";
 
-const LIMIT = 50;
-
 export default async function QueuePage() {
+  // One past the cap, so the badge can tell "exactly 50" from "50 and more".
   const [followups, callbacks, incidents, techs] = await Promise.all([
-    getFollowupQueue(LIMIT),
-    getCallbackQueue(LIMIT),
-    getSafetyIncidents(LIMIT),
+    getFollowupQueue(LIMIT + 1),
+    getCallbackQueue(LIMIT + 1),
+    getSafetyIncidents(LIMIT + 1),
     getTechUtilization(),
   ]);
   // One clock for every "3m ago" on the page, so two rows never disagree.
   const now = new Date();
-  const openCallbacks = callbacks.filter((c) => !c.resolved).length;
+  const shownCallbacks = callbacks.slice(0, LIMIT);
+  // Counted over the rows on screen, so the badge and the table agree.
+  const openCallbacks = shownCallbacks.filter((c) => !c.resolved).length;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-5">
@@ -61,13 +63,13 @@ export default async function QueuePage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="followups">
-          <Followups items={sortFollowups(followups)} now={now} />
+          <Followups items={sortFollowups(followups.slice(0, LIMIT))} now={now} />
         </TabsContent>
         <TabsContent value="callbacks">
-          <Callbacks items={callbacks} now={now} />
+          <Callbacks items={shownCallbacks} now={now} />
         </TabsContent>
         <TabsContent value="safety">
-          <Safety items={incidents} now={now} />
+          <Safety items={incidents.slice(0, LIMIT)} now={now} />
         </TabsContent>
       </Tabs>
 
@@ -76,14 +78,17 @@ export default async function QueuePage() {
   );
 }
 
-/** Count in a tab trigger. Zero is a legitimate count, so it is shown, quietly. */
+/**
+ * Count in a tab trigger. Zero is a legitimate count, so it is shown, quietly.
+ * `n` may be one over LIMIT — that is how the fetch reports "more than fit".
+ */
 function Count({ n }: { n: number }) {
   return (
     <Badge
       variant={n > 0 ? "secondary" : "outline"}
       className="h-4 min-w-5 px-1.5 text-[10px] tabular-nums"
     >
-      {n}
+      {countLabel(n)}
     </Badge>
   );
 }
