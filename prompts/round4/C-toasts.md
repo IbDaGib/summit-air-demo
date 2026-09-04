@@ -33,6 +33,6 @@ Feed: `GET /api/dash/calls?since=<ISO>` → `{ calls, fetchedAt }`. Read the rou
 
 Escalation toasts must be visibly different and stay until dismissed. Ordinary toasts auto-dismiss. The user asked for exactly this: "escalation toasts stand out".
 
-To test end to end, place a call to `+1 (603) 441-7065` is not available to you — instead insert a row with the dev script pattern in `scripts/` or use the `?since=` route with a past timestamp in a one-off dev flag you remove before committing. Say in the report how you verified it.
+You cannot place a phone call. To see a real toast, insert a call row directly: `npx tsx --env-file=.env.local` a one-off script that inserts into `calls` (copy a recent row's shape with `select * from calls order by started_at desc limit 1`; give it a fresh uuid and `started_at = now()`), once as an ordinary call and once with `priority = 'P0'`. Delete both rows afterwards. Say in the report exactly how you verified both toast kinds.
 
 Polish scope is fixed by C5. Nothing on `/cost` charts, nothing on data cells, no change to the priority ramp.
