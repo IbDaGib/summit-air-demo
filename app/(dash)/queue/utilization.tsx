@@ -34,6 +34,9 @@ export function Utilization({ techs }: { techs: TechUtilization[] }) {
 
 function TechRow({ tech }: { tech: TechUtilization }) {
   const pct = Math.min(100, Math.max(0, tech.pct));
+  // More bookings than windows is a real state — a double-booking, or a job
+  // that ran past the week — and the bar should say so, not quietly fill up.
+  const overbooked = tech.bookedWindows > tech.capacityWindows;
   return (
     <li className="col-span-full grid grid-cols-subgrid items-center">
       <span className="truncate font-medium">{tech.name}</span>
@@ -51,11 +54,16 @@ function TechRow({ tech }: { tech: TechUtilization }) {
         aria-label={`${tech.name} booked windows`}
         aria-valuemin={0}
         aria-valuemax={tech.capacityWindows}
-        aria-valuenow={tech.bookedWindows}
+        // A meter's value must stay inside its range. The figures alongside
+        // show the real 23/20; this is the accessible summary of the bar.
+        aria-valuenow={Math.min(tech.bookedWindows, tech.capacityWindows)}
       >
         <span
           className="block h-full rounded"
-          style={{ width: `${pct}%`, background: "var(--chart-2)" }}
+          style={{
+            width: `${pct}%`,
+            background: overbooked ? "var(--destructive)" : "var(--chart-2)",
+          }}
         />
       </span>
       <span className="font-mono text-xs tabular-nums text-muted-foreground">
