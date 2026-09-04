@@ -7,7 +7,7 @@
  * Verify both against https://docs.vapi.ai if a call fails with a tool error.
  */
 import { NextResponse } from "next/server";
-import { stubHandlers } from "../../../../agent/tools/handlers/stub";
+import { handlers } from "../../../../agent/tools/handlers";
 import { safetyBackstop } from "../../../../agent/tools/guard";
 import {
   BLOCKED_AFTER_ESCALATION,
@@ -17,10 +17,7 @@ import {
   get as getCallState,
   recordToolCall,
 } from "../../../../agent/tools/callState";
-import type { ToolHandlers } from "../../../../agent/tools/schemas";
 
-// One-line swap once Workspace B merges the database-backed handlers.
-const handlers: ToolHandlers = stubHandlers;
 
 type VapiToolCall = {
   id: string;
