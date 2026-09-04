@@ -42,7 +42,12 @@ const assistant = {
     // it returns 403 tier_not_allowed, which Vapi surfaces only as the opaque
     // "pipeline-error-mistral-llm-failed". Verified working: small, medium.
     model: process.env.VAPI_MODEL ?? "mistral-medium-latest",
-    temperature: 0.4,
+    // Lowered from 0.4 after the model emitted its tool call as spoken text on
+    // a live call ("Tool calls. ID, four h two y y nine b j. Type, function...").
+    // A prompt rule forbids it, but that is an instruction the model can ignore,
+    // so this reduces the sampling that produced it. If it recurs, the next
+    // levers are mistral-small-latest or magistral-medium-latest.
+    temperature: 0.2,
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
     tools: TOOL_LIST.map((t) => ({
