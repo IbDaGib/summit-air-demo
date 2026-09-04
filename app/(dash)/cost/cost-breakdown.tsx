@@ -68,7 +68,7 @@ export function CostBreakdown({ summary }: { summary: CostSummary }) {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead colSpan={2}>Where the money goes</TableHead>
-                <TableHead className="text-right font-normal text-muted-foreground">Share</TableHead>
+                <TableHead className="text-right font-normal text-muted-foreground">Share (est.)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -93,7 +93,9 @@ export function CostBreakdown({ summary }: { summary: CostSummary }) {
       </Card>
       <p className="px-1 text-xs leading-relaxed text-muted-foreground">
         Measured from Vapi&rsquo;s per-call cost on real test calls. The language model is the smallest
-        slice — changing the voice provider moves the bill; changing the model does not.
+        slice — changing the voice provider moves the bill; changing the model does not. Shares are
+        estimated from provider list rates on a 92-second reference call — Vapi reports one cost per
+        call, not a split.
       </p>
     </section>
   );
