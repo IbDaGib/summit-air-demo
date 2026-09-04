@@ -299,6 +299,36 @@ export async function getFollowupQueue(
   }));
 }
 
+/** Resolved follow-ups are fetched separately so a large open backlog cannot hide them. */
+export async function getResolvedFollowupQueue(
+  limit = 50,
+): Promise<FollowupItem[]> {
+  if (!hasDbConfig()) return [];
+  const rows = await query<Record<string, unknown>>(
+    `select c.id, c.started_at, coalesce(cu.name, c.from_number, 'Unknown caller') as caller,
+            coalesce(c.town, cu.town) as town, c.priority::text as priority,
+            c.followup_reason, c.summary, c.followup_resolved_at
+     from calls c left join customers cu on cu.id = c.customer_id
+     where c.needs_human_followup
+       and c.followup_resolved_at is not null
+     order by c.priority nulls last, c.started_at desc
+     limit $1`,
+    [limit],
+  );
+  return rows.map((r) => ({
+    callId: String(r.id),
+    startedAt: new Date(String(r.started_at)).toISOString(),
+    caller: String(r.caller),
+    town: (r.town as string) ?? null,
+    priority: (r.priority as string) ?? null,
+    reason: (r.followup_reason as string) ?? null,
+    summary: (r.summary as string) ?? null,
+    resolvedAt: r.followup_resolved_at
+      ? new Date(String(r.followup_resolved_at)).toISOString()
+      : null,
+  }));
+}
+
 export interface CallbackItem {
   id: string;
   createdAt: string;

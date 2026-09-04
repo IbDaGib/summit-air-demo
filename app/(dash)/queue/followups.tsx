@@ -6,9 +6,10 @@ import Link from "next/link";
 import type { FollowupItem } from "../_data/metrics";
 import type { Priority } from "../_data/types";
 import { PriorityChip, ramp } from "../_ui/priority";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader } from "@/components/ui/table";
 import { formatPhone, present } from "./_format";
-import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
+import { Dash, Empty, HeadRow, Panel, STICKY_ON_MOBILE, Th, When } from "./cells";
+import { ResolvableRow } from "./resolve-toggle";
 
 const TIERS: ReadonlySet<string> = new Set<Priority>(["P0", "P1", "P2", "P3"]);
 
@@ -30,11 +31,24 @@ function Caller({ value }: { value: string }) {
   );
 }
 
-export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) {
+export function Followups({
+  items,
+  now,
+  showingResolved = false,
+}: {
+  items: FollowupItem[];
+  now: Date;
+  /** Whether resolved rows were asked for — changes only what an empty table says. */
+  showingResolved?: boolean;
+}) {
   if (items.length === 0) {
     return (
       <Panel>
-        <Empty>Nothing waiting on a person.</Empty>
+        <Empty>
+          {showingResolved
+            ? "No follow-ups on record, open or resolved."
+            : "Nothing waiting on a person."}
+        </Empty>
       </Panel>
     );
   }
@@ -49,20 +63,29 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
             <Th>Town</Th>
             <Th className="w-px">Priority</Th>
             <Th>Reason</Th>
-            <Th className="pr-4">Summary</Th>
+            <Th>Summary</Th>
+            <Th className={`w-px pr-3 ${STICKY_ON_MOBILE}`}>
+              <span className="sr-only">Resolve</span>
+            </Th>
           </HeadRow>
         </TableHeader>
         <TableBody>
           {items.map((f) => {
             const priority = asPriority(f.priority);
-            // Every cell carries the same link — the pattern calls-table.tsx
-            // uses — so the whole row is the click target without a client
-            // component or an onClick on the <tr>. Only the caller is
-            // underlined; one affordance per row is enough.
+            // Every data cell carries the same link — the pattern calls-table.tsx
+            // uses — so the row is the click target without an onClick on the
+            // <tr>. Only the caller is underlined; one affordance per row is
+            // enough. The resolve cell is added by ResolvableRow, outside the
+            // link, so pressing it never navigates.
             const href = `/calls/${f.callId}`;
             const summary = present(f.summary);
             return (
-              <TableRow key={f.callId}>
+              <ResolvableRow
+                key={f.callId}
+                kind="followup"
+                id={f.callId}
+                resolved={f.resolvedAt !== null}
+              >
                 <TableCell className="relative pl-4 text-muted-foreground">
                   {/* Severity before you read a word — same rail as the calls list. */}
                   <span
@@ -93,12 +116,18 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
                     {present(f.reason) ?? <Dash />}
                   </Link>
                 </TableCell>
-                <TableCell className="max-w-[48ch] whitespace-normal pr-4 text-muted-foreground">
+                <TableCell className="max-w-[48ch] whitespace-normal text-muted-foreground">
                   <Link href={href} className="block">
-                    {summary ? <span className="line-clamp-2">{summary}</span> : <Dash />}
+                    {summary ? (
+                      <span className="line-clamp-2 group-data-[resolved=true]:line-through">
+                        {summary}
+                      </span>
+                    ) : (
+                      <Dash />
+                    )}
                   </Link>
                 </TableCell>
-              </TableRow>
+              </ResolvableRow>
             );
           })}
         </TableBody>

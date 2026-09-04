@@ -39,6 +39,14 @@ export function HeadRow({ children }: { children: ReactNode }) {
 
 export { TableHead as Th };
 
+/**
+ * For the resolve column: below md the tables scroll sideways, and the one
+ * thing a person can press should not be a swipe away on every row. Pinned to
+ * the right edge, opaque, with a hairline so scrolled cells pass beneath it
+ * cleanly. Applied to the header cell too, so the column reads as one.
+ */
+export const STICKY_ON_MOBILE = "max-md:sticky max-md:right-0 max-md:border-l max-md:bg-card";
+
 /** Relative age, with the exact Denver time one hover away. */
 export function When({ iso, now }: { iso: string; now: Date }) {
   return (
