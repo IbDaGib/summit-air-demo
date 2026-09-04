@@ -7,6 +7,7 @@ import type { FollowupItem } from "../_data/metrics";
 import type { Priority } from "../_data/types";
 import { PriorityChip, ramp } from "../_ui/priority";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { formatPhone } from "./_format";
 import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
 
 const TIERS: ReadonlySet<string> = new Set<Priority>(["P0", "P1", "P2", "P3"]);
@@ -14,6 +15,20 @@ const TIERS: ReadonlySet<string> = new Set<Priority>(["P0", "P1", "P2", "P3"]);
 /** metrics.ts hands back the enum as text; only the four real tiers light the ramp. */
 const asPriority = (p: string | null): Priority | null =>
   p !== null && TIERS.has(p) ? (p as Priority) : null;
+
+/**
+ * `caller` is the customer's name when we know them, otherwise the E.164
+ * number the call came from. A bare number is a thing to dial, so it gets
+ * dialling punctuation and mono figures; a name is left alone.
+ */
+const E164 = /^\+?\d{10,15}$/;
+function Caller({ value }: { value: string }) {
+  return E164.test(value) ? (
+    <span className="font-mono font-normal tabular-nums">{formatPhone(value)}</span>
+  ) : (
+    <>{value}</>
+  );
+}
 
 export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) {
   if (items.length === 0) {
@@ -55,7 +70,7 @@ export function Followups({ items, now }: { items: FollowupItem[]; now: Date }) 
                     href={`/calls/${f.callId}`}
                     className="underline-offset-4 hover:underline"
                   >
-                    {f.caller}
+                    <Caller value={f.caller} />
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{f.town ?? <Dash />}</TableCell>
