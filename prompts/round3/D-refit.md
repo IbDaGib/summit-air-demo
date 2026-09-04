@@ -29,3 +29,8 @@ npx next typegen && npx tsc --noEmit && npx vitest run app && npm run build
 All four must pass. Paste the real output. Take a screenshot of your route at `http://localhost:3000/<route>?key=$DASH_SECRET` (the value is in `.env.local`) and save it to `docs/screenshots/<route>.png`. Then commit, push, and open a PR titled with your workspace letter.
 
 Routes: `/calls`, `/calls/[id]`, `/schedule`. Also run `npx vitest run "app/(dash)/_ui"` — the DST tests must still pass.
+
+## Note added after main moved
+`CallOutcome` gained `"no_outcome"` (ended call, null outcome) and `_data/client.ts` now maps
+null → `in_progress` only while `ended_at` is null. `_ui/outcome.tsx` has the chip. Preserve
+this in the refit — the old behaviour showed eight ended calls as "In progress".

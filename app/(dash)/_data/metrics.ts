@@ -33,7 +33,14 @@ export interface CallVolume {
   booked: number;
   escalated: number;
   callback: number;
-  /** Ended without any recorded outcome — dropped, timed out, or still open. */
+  /**
+   * Not booked, not escalated, not a callback. Counts `outcome IS NULL` — calls
+   * still in progress, dropped, or ended before outcome recording existed — AND
+   * `outcome = 'no_action'`, which is a real agent-recorded ending ("just asking
+   * about your hours"). Label it on that basis; "no recorded outcome" is false
+   * for the no_action share. Splitting no_action out is a contract change and
+   * is logged in KNOWN_ISSUES.
+   */
   unresolved: number;
 }
 

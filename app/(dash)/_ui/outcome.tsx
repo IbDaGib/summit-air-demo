@@ -16,6 +16,10 @@ const STYLES: Record<CallOutcome, { label: string; className: string; dot?: stri
   },
   callback: { label: "Callback", className: "text-zinc-300 ring-zinc-500/40 bg-zinc-500/10" },
   no_action: { label: "No action", className: "text-zinc-500 ring-zinc-700 bg-zinc-800/40" },
+  no_outcome: {
+    label: "No outcome recorded",
+    className: "text-zinc-500 ring-zinc-700 bg-zinc-800/40",
+  },
   in_progress: {
     label: "In progress",
     className: "text-sky-200 ring-sky-400/40 bg-sky-500/10",
