@@ -61,7 +61,10 @@ function toSummary(r: CallRow): CallSummary {
     town: (r.town as string) ?? null,
     county: (r.county as CallSummary["county"]) ?? null,
     priority: (r.priority as CallSummary["priority"]) ?? null,
-    outcome: ((r.outcome as string) ?? "in_progress") as CallSummary["outcome"],
+    // A null outcome only means "in progress" while the call is still open.
+    // Eight ended calls were showing "In progress" hours later.
+    outcome: ((r.outcome as string) ??
+      (r.ended_at ? "no_outcome" : "in_progress")) as CallSummary["outcome"],
     summary: (r.summary as string) ?? null,
   };
 }

@@ -31,7 +31,14 @@ export type CallOutcome =
   | "escalated"
   | "callback"
   | "no_action"
-  | "in_progress";
+  /** `calls.outcome` is null and `ended_at` is null — the call is live right now. */
+  | "in_progress"
+  /**
+   * `calls.outcome` is null but the call has ended: dropped, timed out, or it
+   * ended before outcome recording existed. Distinct from `no_action`, which the
+   * agent records deliberately, and from `in_progress`, which it is not.
+   */
+  | "no_outcome";
 
 /** `calls.sentiment`. */
 export type Sentiment = "calm" | "anxious" | "frustrated" | "distressed";
