@@ -12,8 +12,19 @@
  * loading flash between ticks.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { cn } from "cn";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { CallSummary } from "../_data/types";
 import { PriorityChip, ramp } from "../_ui/priority";
 import { OutcomeChip } from "../_ui/outcome";
@@ -70,122 +81,135 @@ export function CallsTable({ initialCalls }: { initialCalls: CallSummary[] }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 px-5 pt-4 pb-3">
-        <h1 className="text-sm font-semibold tracking-tight text-zinc-200">Calls</h1>
-        <span className="text-xs text-zinc-500">{calls.length} most recent</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="text-base font-semibold tracking-tight">Calls</h1>
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {calls.length} most recent
+        </span>
         <PollStatus lastSync={lastSync} stale={stale} />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-0 text-sm">
-          <thead>
-            <tr className="text-left text-[11px] font-medium tracking-wide text-zinc-500 uppercase">
-              <Th className="w-px pl-5">Time</Th>
-              <Th>Caller</Th>
-              <Th>Town</Th>
-              <Th className="w-px">Priority</Th>
-              <Th className="w-px">Outcome</Th>
-              <Th className="pr-5">Summary</Th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="gap-0 overflow-hidden py-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent [&_th]:h-8 [&_th]:px-3 [&_th]:text-[11px] [&_th]:font-medium [&_th]:tracking-wide [&_th]:text-muted-foreground [&_th]:uppercase">
+              <TableHead className="w-px pl-4">Time</TableHead>
+              <TableHead>Caller</TableHead>
+              <TableHead>Town</TableHead>
+              <TableHead className="w-px">Priority</TableHead>
+              <TableHead className="w-px">Outcome</TableHead>
+              <TableHead className="pr-4">Summary</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="[&_td]:px-3 [&_td]:py-2">
             {calls.map((c) => (
               <Row key={c.id} call={c} isNew={fresh.has(c.id)} />
             ))}
             {calls.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-sm text-zinc-500">
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={6}
+                  className="py-16 text-center text-sm whitespace-normal text-muted-foreground"
+                >
                   No calls yet. The list refreshes every {POLL_MS / 1000} seconds.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : null}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </>
   );
 }
 
 function Row({ call, isNew }: { call: CallSummary; isNew: boolean }) {
   const r = ramp(call.priority);
+  const href = `/calls/${call.id}`;
   return (
-    <tr
-      className={`group border-b border-zinc-900 transition-colors ${
-        isNew ? "bg-sky-500/10" : "hover:bg-zinc-900/60"
-      }`}
-    >
-      <Td className="relative pl-5 whitespace-nowrap">
+    // A row that arrived on the last tick is tinted so the eye lands on it;
+    // the tint is the same "live" channel the in-progress chip uses.
+    <TableRow className={cn("group", isNew && "bg-sky-500/10 hover:bg-sky-500/10")}>
+      <TableCell className="relative pl-4">
         {/* The rail is the at-a-glance channel: severity before you read a word. */}
         <span className={`absolute inset-y-0 left-0 w-[3px] ${r.rail}`} aria-hidden />
-        <Link href={`/calls/${call.id}`} className="block">
-          <span className="font-mono tabular-nums text-zinc-200">{denverTime(call.startedAt)}</span>
-          <span className="ml-2 text-xs text-zinc-500">{denverMonthDay(call.startedAt)}</span>
-          <span className="ml-2 text-xs text-zinc-600" suppressHydrationWarning>
+        <Link href={href} className="block">
+          <span className="font-mono tabular-nums">{denverTime(call.startedAt)}</span>
+          <span className="ml-2 text-xs text-muted-foreground">
+            {denverMonthDay(call.startedAt)}
+          </span>
+          <span className="ml-2 text-xs text-muted-foreground/60" suppressHydrationWarning>
             {relativeAge(call.startedAt)}
           </span>
         </Link>
-      </Td>
-      <Td>
-        <Link href={`/calls/${call.id}`} className="block">
+      </TableCell>
+      <TableCell>
+        <Link href={href} className="block">
           {call.callerName ? (
-            <span className="text-zinc-200">{call.callerName}</span>
+            <span>{call.callerName}</span>
           ) : (
-            <span className="text-zinc-500 italic">Unrecognized</span>
+            <span className="text-muted-foreground italic">Unrecognized</span>
           )}
-          <span className="ml-2 font-mono text-xs text-zinc-600">
+          <span className="ml-2 font-mono text-xs text-muted-foreground/70 tabular-nums">
             {formatPhone(call.fromNumber)}
           </span>
         </Link>
-      </Td>
-      <Td className="whitespace-nowrap">
-        <Link href={`/calls/${call.id}`} className="block text-zinc-300">
-          {call.town ?? <span className="text-zinc-600">—</span>}
+      </TableCell>
+      <TableCell>
+        <Link href={href} className="block">
+          {call.town ?? <span className="text-muted-foreground/60">—</span>}
           {call.county ? (
-            <span className="ml-1.5 text-xs text-zinc-600">{call.county}</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">{call.county}</span>
           ) : null}
         </Link>
-      </Td>
-      <Td>
-        <Link href={`/calls/${call.id}`} className="block">
+      </TableCell>
+      <TableCell>
+        <Link href={href} className="block">
           <PriorityChip priority={call.priority} />
         </Link>
-      </Td>
-      <Td>
-        <Link href={`/calls/${call.id}`} className="block">
+      </TableCell>
+      <TableCell>
+        <Link href={href} className="block">
           <OutcomeChip outcome={call.outcome} />
         </Link>
-      </Td>
-      <Td className="pr-5">
-        <Link href={`/calls/${call.id}`} className="block max-w-[52ch] truncate text-zinc-400">
+      </TableCell>
+      {/* w-full + max-w-0 lets this column absorb the slack and truncate, instead
+          of pushing the table wider than the card. */}
+      <TableCell className="w-full max-w-0 pr-4">
+        <Link href={href} className="block max-w-[64ch] truncate text-muted-foreground">
           {call.summary ?? (
-            <span className="text-zinc-600 italic">
+            <span className="text-muted-foreground/60 italic">
               {call.outcome === "in_progress" ? "Call in progress…" : "No summary"}
             </span>
           )}
         </Link>
-      </Td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
+/**
+ * The poll's own status, as a badge. Green pulse while ticking; amber, and the
+ * last-known-data caveat, when a tick failed. Sits at the far right of the
+ * title row.
+ */
 function PollStatus({ lastSync, stale }: { lastSync: number | null; stale: boolean }) {
   if (stale) {
     return (
-      <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-amber-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+      <Badge variant="outline" className="ml-auto gap-1.5 font-normal text-amber-300">
+        <span className="size-1.5 rounded-full bg-amber-400" aria-hidden />
         Reconnecting — showing last known data
-      </span>
+      </Badge>
     );
   }
   return (
-    <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-zinc-500">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+    <Badge variant="outline" className="ml-auto gap-1.5 font-normal">
+      <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden />
       Live
-      <span className="text-zinc-600">
+      <span className="text-muted-foreground tabular-nums">
         · every {POLL_MS / 1000}s
         {lastSync ? ` · synced ${relativeAge(new Date(lastSync).toISOString())}` : ""}
       </span>
-    </span>
+    </Badge>
   );
 }
 
@@ -197,14 +221,4 @@ function formatPhone(e164: string | null): string {
   return ten.length === 10
     ? `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}`
     : e164;
-}
-
-function Th({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <th className={`border-b border-zinc-800 px-3 pb-2 font-medium ${className}`}>{children}</th>
-  );
-}
-
-function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 align-middle ${className}`}>{children}</td>;
 }
