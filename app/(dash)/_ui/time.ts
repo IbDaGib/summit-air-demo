@@ -92,10 +92,26 @@ export function denverOffsetMinutes(at: Date): number {
   return (asUtc - Math.floor(at.getTime() / 1000) * 1000) / 60_000;
 }
 
+/** The Denver wall-clock hour at an instant, 0–23. */
+function denverHourAt(at: Date): number {
+  const p = Object.fromEntries(
+    parts.formatToParts(at).map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  return Number(p.hour);
+}
+
 /**
  * The instant at which it is `hour:00` in Denver, `dayOffset` days from `from`.
  * Used to lay out the schedule grid and to seed fixtures — going through the
  * real zone offset means the grid stays correct across a DST boundary.
+ *
+ * TODO(swap): db/range.ts (Workspace A, PR #1) resolves the same offset per
+ * date from the IANA database. Once that merges, delete this and use its
+ * `denverTimestamp(day, hour)` rather than keeping a second implementation.
+ * One difference to check when swapping: `denverOffset()` there anchors at
+ * 12:00 UTC, which is past the 02:00 changeover, so it is correct for
+ * working-hours windows but not for the midnight range bounds the schedule
+ * page asks for on a DST date.
  */
 export function denverInstant(dayOffset: number, hour: number, from: Date = new Date()): Date {
   const shifted = new Date(from.getTime() + dayOffset * 86_400_000);
@@ -106,8 +122,13 @@ export function denverInstant(dayOffset: number, hour: number, from: Date = new 
   // Reading it from the wall-time-as-UTC guess puts it on the wrong side of a
   // DST transition — an 8:00 window on Denver's spring-forward date rendered as
   // 9:00. The first pass lands near the answer, the second resolves the offset
-  // there and corrects it. Converges for every real zone.
-  const first = wallAsUtc - denverOffsetMinutes(new Date(wallAsUtc)) * 60_000;
-  const second = wallAsUtc - denverOffsetMinutes(new Date(first)) * 60_000;
-  return new Date(second);
+  // there and corrects it.
+  const first = new Date(wallAsUtc - denverOffsetMinutes(new Date(wallAsUtc)) * 60_000);
+  const second = new Date(wallAsUtc - denverOffsetMinutes(first) * 60_000);
+
+  // Spring forward: 02:00–02:59 does not exist in Denver, so no instant has the
+  // requested hour and the second pass lands an hour *before* what was asked
+  // for (02:00 -> 01:00 MST). The first pass is the instant the clock jumps to
+  // (03:00 MDT), which is what asking for "2 AM" has to mean on that date.
+  return denverHourAt(second) === hour ? second : first;
 }
