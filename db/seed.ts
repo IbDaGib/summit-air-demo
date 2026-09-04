@@ -2,10 +2,10 @@
  * Summit Air demo seed. `npm run seed`.
  *
  * Idempotent: run it as many times as you like. Techs, customers and holidays are
- * upserted on a stable key; bookings are generated from a fixed pool of UUIDs
- * that is deleted and rewritten each run, so re-seeding never accumulates
- * duplicates and never touches a booking made by a real call (those get ids
- * outside the pool).
+ * upserted on a stable key; the schedule is swapped wholesale by
+ * replace_seed_schedule(), one transaction, so re-seeding never accumulates
+ * duplicates, never leaves a half-built schedule behind, and never touches a
+ * booking made by a real call (those get ids outside the seed-owned range).
  *
  * What it is for: `find_slots` has to do real work. Roughly 70% of the next five
  * business days is already taken, so the schedule has genuine gaps to find rather
@@ -32,12 +32,12 @@ import {
   isWeekday,
   TIMEZONE,
 } from "./range";
-import { EXCLUSION_VIOLATION } from "./types";
 import type {
   BookingInsert,
   CountyName,
   CustomerInsert,
   HolidayInsert,
+  Json,
   PriorityTier,
   TechInsert,
   TechSkill,
@@ -96,7 +96,11 @@ const techId = (n: number) => `7ec00000-0000-4000-8000-${String(n).padStart(12, 
 const customerId = (n: number) => `c0570000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const bookingId = (n: number) => `b0040000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
-/** Upper bound on seeded bookings. The whole pool is cleared before each run. */
+/**
+ * Highest counter the seed will mint. Every id it writes is
+ * 'b0040000-0000-4000-8000-<counter>', and replace_seed_schedule owns exactly
+ * that namespace — see db/migrations/0002_seed_schedule.sql.
+ */
 const BOOKING_POOL_SIZE = 200;
 
 interface TechFixture extends TechInsert {
@@ -594,12 +598,6 @@ function buildBookings(now: Date): { rows: BookingInsert[]; fill: string[] } {
  * Write
  * ------------------------------------------------------------------ */
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
-}
-
 async function main(): Promise<void> {
   const db = getDb();
   const now = new Date();
@@ -632,55 +630,38 @@ async function main(): Promise<void> {
   if (customers.error) throw new Error(`customers: ${customers.error.message}`);
   console.log(`  customers  ${customerRows.length}`);
 
-  // Write the schedule before removing anything.
+  // The schedule is replaced in ONE transaction, inside the database.
   //
-  // This used to delete the id pool and then insert. PostgREST cannot span a
-  // transaction, so any failure between the two left the demo schedule empty or
-  // half-rebuilt — destructive despite the seed being idempotent. Upserting on
-  // the deterministic id replaces each booking in place, so a failure at any
-  // point leaves the previous schedule intact rather than gone.
+  // This used to be a delete of the seeded id range followed by a separate
+  // insert. PostgREST gives one transaction per request, so a crash between the
+  // two left the demo schedule empty or half-rebuilt — destructive despite the
+  // seed being idempotent. An upsert-then-prune fixes the destructiveness but
+  // not the correctness: booking ids are positional, so tomorrow's run maps the
+  // same tech and window to a different id, collides with yesterday's row, skips
+  // it, and then prunes the row it collided with — leaving a hole.
+  //
+  // replace_seed_schedule (db/migrations/0002_seed_schedule.sql) does the delete
+  // and every insert in one transaction. Kill the process at any point and the
+  // previous schedule is still there, whole.
   const { rows, fill } = buildBookings(now);
-  let inserted = 0;
-  let skipped = 0;
-
-  for (const batch of chunk(rows, 25)) {
-    const res = await db.from("bookings").upsert(batch, { onConflict: "id" });
-    if (!res.error) {
-      inserted += batch.length;
-      continue;
+  const replaced = await db.rpc("replace_seed_schedule", {
+    p_bookings: rows as unknown as Json,
+  });
+  if (replaced.error) {
+    if (replaced.error.code === "PGRST202") {
+      throw new Error(
+        "replace_seed_schedule is missing — apply db/migrations/0002_seed_schedule.sql. " +
+          "Nothing was changed.",
+      );
     }
-    // A live booking may already hold one of these windows. Fall back to
-    // row-by-row so one collision does not cost us the whole batch.
-    for (const row of batch) {
-      const one = await db.from("bookings").upsert(row, { onConflict: "id" });
-      if (!one.error) {
-        inserted++;
-      } else if (one.error.code === EXCLUSION_VIOLATION) {
-        skipped++;
-      } else {
-        throw new Error(`bookings: ${one.error.message}`);
-      }
-    }
+    throw new Error(`bookings: ${replaced.error.message}`);
   }
 
-  // Only now prune pool ids this run did not write — leftovers from a previous
-  // run that generated a different or larger schedule. Bookings created by a
-  // real call are outside the pool and are never touched.
-  const written = new Set(rows.map((r) => r.id));
-  const stale = Array.from({ length: BOOKING_POOL_SIZE }, (_, i) => bookingId(i + 1)).filter(
-    (id) => !written.has(id),
-  );
-  let pruned = 0;
-  for (const ids of chunk(stale, 50)) {
-    const del = await db.from("bookings").delete().in("id", ids).select("id");
-    if (del.error) throw new Error(`bookings prune: ${del.error.message}`);
-    pruned += del.data?.length ?? 0;
-  }
-
+  const { written, skipped, pruned } = replaced.data[0];
   console.log(
-    `  bookings   ${inserted} written` +
-      `${skipped ? `, ${skipped} skipped (window already held)` : ""}` +
-      `${pruned ? `, ${pruned} pruned` : ""}`,
+    `  bookings   ${written} written` +
+      `${skipped ? `, ${skipped} skipped (window held by a real booking)` : ""}` +
+      `${pruned ? `, ${pruned} replaced` : ""}`,
   );
   for (const line of fill) console.log(`             ${line}`);
   console.log("Seed complete.");

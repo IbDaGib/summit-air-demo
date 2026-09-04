@@ -350,7 +350,16 @@ export type Database = {
       };
     };
     Views: Record<never, never>;
-    Functions: Record<never, never>;
+    Functions: {
+      /**
+       * Replaces the seeded demo schedule in a single transaction — see
+       * db/migrations/0002_seed_schedule.sql. Only db/seed.ts calls it.
+       */
+      replace_seed_schedule: {
+        Args: { p_bookings: Json };
+        Returns: { written: number; skipped: number; pruned: number }[];
+      };
+    };
     Enums: {
       priority_tier: PriorityTier;
       county_name: CountyName;
