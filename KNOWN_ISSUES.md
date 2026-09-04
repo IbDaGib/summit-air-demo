@@ -124,3 +124,13 @@ the caller heard "What's going on today?" in full. Do not debug word-level speec
 greetings, missing words, odd pauses — from that field. Use the recording, or the static
 `firstMessage`/`request-start` strings, which are what was actually sent to TTS. The "Hi there"
 padding on the greeting was added on the strength of that field and fixed nothing.
+
+## record_call_outcome often never fires, and that is fine
+
+The model says the confirmation and "Goodbye" in one turn, and most callers hang up on
+"Goodbye" — before the model's next turn, which is where record_call_outcome and endCall would
+run. So on a normal successful call the trace frequently shows no outcome tool at all. The ticket
+is still correct because the events webhook derives the outcome from the trace: a confirmed
+book_appointment is "booked", an escalate_emergency is "escalated", a save_callback_request is
+"callback". That derivation is load-bearing, not a fallback. Do not "fix" the tool not firing by
+forcing the model to hold the line after goodbye.
