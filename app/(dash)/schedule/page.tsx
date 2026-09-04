@@ -90,10 +90,13 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
         entrance: a short fade and a 0.5rem slide, 300ms, no layout shift. The
         slide always comes from the right — the page has no client state to
         know which arrow was pressed, and a wrong-way slide is worse than none.
+        `motion-safe:` because the first frame is opacity 0: a viewer who has
+        asked for reduced motion gets the grid at rest, not a fade they cannot
+        see finish.
       */}
       <Card
         key={weekKey}
-        className="animate-in fade-in-0 slide-in-from-right-2 gap-0 overflow-hidden py-0 duration-300"
+        className="gap-0 overflow-hidden py-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-2 motion-safe:duration-300"
       >
         <Table className="min-w-[64rem]">
           <TableHeader>
