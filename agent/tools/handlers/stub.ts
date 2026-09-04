@@ -196,7 +196,11 @@ export const stubHandlers: ToolHandlers = {
     const digits = (phone ?? "").replace(/\D/g, "");
     if (digits.length < 10) return null;
     const last10 = digits.slice(-10);
-    return CUSTOMERS.find((c) => c.phone.replace(/\D/g, "").endsWith(last10)) ?? null;
+    const found = CUSTOMERS.find((c) => c.phone.replace(/\D/g, "").endsWith(last10));
+    // Echo the carrier-supplied number back so the agent can confirm it aloud.
+    // A caller asked "can you repeat it back?" and the agent had to say it
+    // could not see the caller ID.
+    return found ? { ...found, callerPhone: phone } : ({ callerPhone: phone } as never);
   },
 
   async check_service_area({ town }): Promise<ServiceAreaResult> {

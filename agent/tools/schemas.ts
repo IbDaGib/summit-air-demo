@@ -31,7 +31,7 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
   lookup_customer: {
     name: "lookup_customer",
     description:
-      "Look up an existing customer by phone number. Call this once at the start of every call using the caller ID. If it returns null, run full intake without mentioning that the number was unrecognized.",
+      "Look up the caller. Call this once at the start of every call. The phone number is supplied by the carrier and you do not need to know it — pass an empty string. The result always includes callerPhone, which you may read back if asked to confirm their number. If no customer is returned, run full intake without mentioning that the number was unrecognized.",
     parameters: obj({ phone: { type: "string" } }, ["phone"]),
   },
 
@@ -168,6 +168,8 @@ export const TOOL_LIST: ToolSchema[] = Object.values(TOOL_SCHEMAS);
  * ------------------------------------------------------------------ */
 
 export interface CustomerRecord {
+  /** Carrier-supplied caller ID, echoed so the agent can confirm it aloud. */
+  callerPhone?: string;
   id: string;
   name: string;
   phone: string;
