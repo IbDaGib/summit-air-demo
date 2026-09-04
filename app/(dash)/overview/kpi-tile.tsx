@@ -29,9 +29,7 @@ export function KpiTile({
         <div className="text-2xl font-semibold leading-none tracking-tight tabular-nums">
           {value}
         </div>
-        <p className="mt-2 truncate text-xs text-muted-foreground tabular-nums" title={footnote}>
-          {footnote}
-        </p>
+        <p className="mt-2 text-xs leading-snug text-muted-foreground tabular-nums">{footnote}</p>
       </CardContent>
     </Card>
   );
@@ -65,7 +63,7 @@ export function KpiTiles({
         footnote={
           noCalls
             ? NO_CALLS
-            : `last 30 days · avg ${duration(cost.avgDurationSeconds)} on the line`
+            : `last 30 days · avg call ${duration(cost.avgDurationSeconds)}`
         }
       />
       <KpiTile
@@ -76,7 +74,7 @@ export function KpiTiles({
             ? noCalls
               ? NO_CALLS
               : "no calls have a recorded outcome yet"
-            : `${pct(bookingRate(volume) * 100)} of the ${plural(resolved, "call")} with a recorded outcome`
+            : `${pct(bookingRate(volume) * 100)} of ${plural(resolved, "call")} with a recorded outcome`
         }
       />
       <KpiTile

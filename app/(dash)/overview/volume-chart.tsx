@@ -81,9 +81,11 @@ export function VolumeChart({ data }: { data: DailyPoint[] }) {
           cursor={false}
           content={<ChartTooltipContent labelFormatter={(value) => dayHeading(String(value))} />}
         />
-        <Bar dataKey="booked" stackId="calls" fill="var(--color-booked)" />
-        <Bar dataKey="escalated" stackId="calls" fill="var(--color-escalated)" />
-        <Bar dataKey="other" stackId="calls" fill="var(--color-other)" />
+        {/* No grow-in animation: the bars are the content, and a stakeholder
+            screen-share (or a static capture) must never catch an empty chart. */}
+        <Bar dataKey="booked" stackId="calls" fill="var(--color-booked)" isAnimationActive={false} />
+        <Bar dataKey="escalated" stackId="calls" fill="var(--color-escalated)" isAnimationActive={false} />
+        <Bar dataKey="other" stackId="calls" fill="var(--color-other)" isAnimationActive={false} />
       </BarChart>
     </ChartContainer>
   );
