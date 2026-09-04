@@ -16,16 +16,17 @@ import { RAMP, ramp } from "../_ui/priority";
  * Tailwind classes resolve to, so a recharts <Cell> can be filled with it.
  * RAMP's `dot` classes (bg-red-500, …) are what make Tailwind emit these
  * --color-* variables at all, and the legend below renders those same classes,
- * so a slice and its swatch cannot disagree.
+ * so a slice and its swatch cannot disagree. priority-donut.test.ts holds each
+ * entry to its RAMP class.
  */
-const TIER_FILL: Record<Priority, string> = {
+export const TIER_FILL: Record<Priority, string> = {
   P0: "var(--color-red-500)", // RAMP.P0.dot = bg-red-500
   P1: "var(--color-amber-400)", // RAMP.P1.dot = bg-amber-400
   P2: "var(--color-sky-500)", // RAMP.P2.dot = bg-sky-500
   P3: "var(--color-slate-500)", // RAMP.P3.dot = bg-slate-500
 };
 /** ramp(null).dot = bg-zinc-600. Deliberately unlit, like the chip. */
-const UNTIERED_FILL = "var(--color-zinc-600)";
+export const UNTIERED_FILL = "var(--color-zinc-600)";
 
 const TIERS: Priority[] = ["P0", "P1", "P2", "P3"];
 
