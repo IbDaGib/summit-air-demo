@@ -22,4 +22,25 @@ Revin FDE case study. **Summit Air here is the fictional company from the case s
 | Scheduling | Postgres `EXCLUDE USING gist` — double-booking impossible at the DB level |
 | Evals | Vitest + simulated caller + LLM judge |
 
+## Dispatch dashboard
+
+Read-only operator view at `/calls`, `/calls/[id]` and `/schedule`.
+
+Set `DASH_SECRET` in `.env.local`, then open the dashboard once with the key:
+
+```
+/calls?key=<DASH_SECRET>
+```
+
+`proxy.ts` exchanges it for an httpOnly cookie (12h) and strips the key from the
+URL so it never lands in a screen share. One shared secret, not an auth system —
+dashboard auth is out of scope per DECISIONS.md. With `DASH_SECRET` unset the
+dashboard fails closed rather than serving transcripts to the open internet.
+
+> `proxy.ts` is what used to be `middleware.ts`. Next.js 16 renamed the file
+> convention and the exported function; `middleware.ts` is deprecated.
+
+The call list polls every 3s rather than subscribing to Supabase Realtime —
+indistinguishable on a screen share, with no subscription lifecycle to get wrong.
+
 See DECISIONS.md for rejected alternatives and KNOWN_ISSUES.md for what I would fix next.
