@@ -13,7 +13,7 @@ const MODEL = process.env.EXTRACT_MODEL ?? "magistral-medium-latest";
 
 export interface CallSummary {
   summary: string;
-  sentiment: "positive" | "neutral" | "frustrated" | "distressed";
+  sentiment: "calm" | "anxious" | "frustrated" | "distressed";
   requested: string;
   techNotes: string;
   needsHumanFollowup: boolean;
@@ -24,7 +24,7 @@ const SCHEMA = {
   type: "object",
   properties: {
     summary: { type: "string" },
-    sentiment: { type: "string", enum: ["positive", "neutral", "frustrated", "distressed"] },
+    sentiment: { type: "string", enum: ["calm", "anxious", "frustrated", "distressed"] },
     requested: { type: "string" },
     techNotes: { type: "string" },
     needsHumanFollowup: { type: "boolean" },
@@ -42,8 +42,11 @@ Write for a dispatcher reading twenty of these on a Monday morning. Be specific 
 - requested: one line naming what the caller wanted.
 - techNotes: only what changes what the technician does — access, equipment, a
   vulnerable occupant in the home, a pet, a gate code. Empty string if nothing.
-- sentiment: how the caller sounded, not how the call was resolved. "distressed"
-  is for a genuine emergency or real fear, not mild annoyance.
+- sentiment: how the caller sounded, not how the call was resolved.
+  "calm" is an ordinary caller. "anxious" is worried but composed — no heat with
+  a baby in the house. "frustrated" is annoyed at the company, a repeat visit, a
+  missed appointment. "distressed" is a genuine emergency or real fear, and is
+  never used for mere annoyance.
 - needsHumanFollowup: true if a safety escalation happened, if a tool failed, if
   the caller asked for a person, if they were upset, or if nothing was booked
   when something should have been.

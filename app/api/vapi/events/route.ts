@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractCallSummary } from "../../../../agent/postcall/extract";
-import { persistCall, recentCalls } from "../../../../agent/postcall/store";
+import { persistCall } from "../../../../agent/postcall/store";
+import { hasDbConfig, query } from "../../../../db/neon";
 import { snapshot } from "../../../../agent/tools/callState";
 
 /**
@@ -10,7 +11,9 @@ import { snapshot } from "../../../../agent/tools/callState";
  * Without this nothing survives a call — no transcript, no summary, no ticket.
  */
 export async function GET() {
-  return NextResponse.json({ ok: true, recent: recentCalls(10).length });
+  if (!hasDbConfig()) return NextResponse.json({ ok: true, db: false });
+  const r = await query<{ n: number }>("select count(*)::int n from calls");
+  return NextResponse.json({ ok: true, db: true, calls: r[0]?.n ?? 0 });
 }
 
 function unauthorized(req: Request): boolean {
@@ -80,6 +83,9 @@ export async function POST(req: Request) {
     priority: state?.priority,
     outcome: state?.outcome ?? (state?.escalated ? "escalated" : undefined),
     facts: state?.facts,
+    // The town the caller named on THIS call, not the one on their customer
+    // record — a landlord calls about a different property than their own.
+    town: (state?.facts?.town as string) ?? undefined,
     transcript,
     summary: summary?.summary,
     sentiment: summary?.sentiment,

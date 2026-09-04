@@ -23,7 +23,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { getDb } from "./client";
+import { upsertRows, withClient } from "./neon";
 import {
   addDays,
   denverDate,
@@ -599,17 +599,14 @@ function buildBookings(now: Date): { rows: BookingInsert[]; fill: string[] } {
  * ------------------------------------------------------------------ */
 
 async function main(): Promise<void> {
-  const db = getDb();
   const now = new Date();
 
   console.log(`Seeding ${process.env.NEXT_PUBLIC_SUPABASE_URL} (times in ${TIMEZONE})`);
 
-  const holidays = await db.from("holidays").upsert(HOLIDAYS, { onConflict: "day" });
-  if (holidays.error) throw new Error(`holidays: ${holidays.error.message}`);
+  await upsertRows("holidays", HOLIDAYS as unknown as Record<string, unknown>[], "day");
   console.log(`  holidays   ${HOLIDAYS.length}`);
 
-  const techs = await db.from("techs").upsert(TECHS, { onConflict: "id" });
-  if (techs.error) throw new Error(`techs: ${techs.error.message}`);
+  await upsertRows("techs", TECHS as unknown as Record<string, unknown>[], "id");
   console.log(`  techs      ${TECHS.length} (${TECHS.filter((t) => t.on_call).length} on call)`);
 
   // PostgREST rejects a bulk insert whose objects do not all carry the same keys,
@@ -626,8 +623,7 @@ async function main(): Promise<void> {
     access_notes: c.access_notes ?? null,
     last_service_at: c.last_service_at ?? null,
   }));
-  const customers = await db.from("customers").upsert(customerRows, { onConflict: "id" });
-  if (customers.error) throw new Error(`customers: ${customers.error.message}`);
+  await upsertRows("customers", customerRows as unknown as Record<string, unknown>[], "id");
   console.log(`  customers  ${customerRows.length}`);
 
   // The schedule is replaced in ONE transaction, inside the database.
@@ -644,20 +640,26 @@ async function main(): Promise<void> {
   // and every insert in one transaction. Kill the process at any point and the
   // previous schedule is still there, whole.
   const { rows, fill } = buildBookings(now);
-  const replaced = await db.rpc("replace_seed_schedule", {
-    p_bookings: rows as unknown as Json,
-  });
-  if (replaced.error) {
-    if (replaced.error.code === "PGRST202") {
-      throw new Error(
-        "replace_seed_schedule is missing — apply db/migrations/0002_seed_schedule.sql. " +
-          "Nothing was changed.",
+  const replaced = await withClient(async (c) => {
+    try {
+      const r = await c.query<{ written: number; skipped: number; pruned: number }>(
+        "select * from replace_seed_schedule($1::jsonb)",
+        [JSON.stringify(rows)],
       );
+      return r.rows[0];
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/function replace_seed_schedule.* does not exist/i.test(msg)) {
+        throw new Error(
+          "replace_seed_schedule is missing — run `npx tsx --env-file=.env.local " +
+            "scripts/apply-migrations.mts`. Nothing was changed.",
+        );
+      }
+      throw new Error(`bookings: ${msg}`);
     }
-    throw new Error(`bookings: ${replaced.error.message}`);
-  }
+  });
 
-  const { written, skipped, pruned } = replaced.data[0];
+  const { written, skipped, pruned } = replaced;
   console.log(
     `  bookings   ${written} written` +
       `${skipped ? `, ${skipped} skipped (window held by a real booking)` : ""}` +
