@@ -44,6 +44,12 @@ const SERIES_DAYS = 14;
 export default async function OverviewPage() {
   // The chart's legend counts must describe the same days as its bars. The
   // series is bucketed on Denver calendar days, so the range is too.
+  //
+  // Known limitation: denverInstant() (main's, _ui/time.ts) shifts by 24h × k
+  // before taking the Denver day key, so while the 14-day shift straddles a DST
+  // changeover these bounds sit a calendar day off the SQL series for about one
+  // wall-clock hour a day. Legend counts can then differ from the bars by one
+  // day's calls. Next changeover: 2026-11-01.
   const now = new Date();
   const chartRange = {
     from: denverInstant(-(SERIES_DAYS - 1), 0, now),
