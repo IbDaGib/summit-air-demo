@@ -117,6 +117,35 @@ export function computePriority(facts: SituationFacts, now: Date): PriorityResul
     };
   }
 
+  // P1/P2 — the system still runs but cannot hold the house, and someone in it
+  // cannot tolerate that.
+  //
+  // Every rule above gates on `systemDown`, which sent a real call to P3 with
+  // the reason "no vulnerable occupant reported" while the caller had just said
+  // an elderly relative lived there. A furnace blowing cool air at 12°F is not
+  // routine work because the unit is technically running.
+  if (
+    !facts.systemDown &&
+    facts.vulnerableOccupant &&
+    (facts.issue === "no_heat" || facts.issue === "poor_performance")
+  ) {
+    const who = occupant ? ` (${occupant})` : "";
+    if (freezing) {
+      return {
+        tier: "P1",
+        reason: `System cannot hold temperature with a vulnerable occupant on site${who} and the outdoor temperature at ${facts.outdoorTempF}°F.`,
+        responseTarget: sameDay,
+        blockBooking: false,
+      };
+    }
+    return {
+      tier: "P2",
+      reason: `System is underperforming with a vulnerable occupant on site${who}.`,
+      responseTarget: "Next business day — prioritised ahead of routine work.",
+      blockBooking: false,
+    };
+  }
+
   // P2 — the system is down, but nothing compounds it.
   if (facts.systemDown) {
     return {

@@ -200,3 +200,43 @@ describe("computePriority", () => {
     expect(JSON.stringify(f)).toBe(before);
   });
 });
+
+// Regression: a real call reported an underperforming furnace with an elderly
+// relative in the house and was tiered P3 "no vulnerable occupant reported" —
+// a reason that contradicted its own input. Every rule gated on systemDown.
+describe("underperforming system with a vulnerable occupant", () => {
+  const base = {
+    propertyType: "residential" as const,
+    issue: "poor_performance" as const,
+    systemDown: false,
+    hazard: "none" as const,
+    vulnerableOccupant: true,
+    town: "Bozeman",
+  };
+  const at = new Date("2026-09-04T18:00:00Z");
+
+  it("is not routine", () => {
+    const r = computePriority(base, at);
+    expect(r.tier).toBe("P2");
+    expect(r.reason).toMatch(/vulnerable occupant/i);
+  });
+
+  it("is same-day when it is freezing", () => {
+    expect(computePriority({ ...base, outdoorTempF: 12 }, at).tier).toBe("P1");
+  });
+
+  it("also covers a no_heat complaint where the unit still runs", () => {
+    expect(computePriority({ ...base, issue: "no_heat" }, at).tier).toBe("P2");
+  });
+
+  it("stays routine with nobody vulnerable", () => {
+    expect(computePriority({ ...base, vulnerableOccupant: false }, at).tier).toBe("P3");
+  });
+
+  it("never claims no vulnerable occupant when one was reported", () => {
+    for (const outdoorTempF of [undefined, 12, 70]) {
+      const r = computePriority({ ...base, outdoorTempF }, at);
+      expect(r.reason).not.toMatch(/no .*vulnerable occupant/i);
+    }
+  });
+});

@@ -29,11 +29,14 @@ const assistant = {
 
   // Static so the phone answers instantly. An LLM-generated greeting leaves a
   // second of dead air before the caller hears anything.
-  // Leading "Hi there" is deliberate padding: the first ~300ms of audio is
-  // clipped on some carrier paths, and it ate "What's" on 2 of 4 test calls.
-  // Now a throwaway greeting absorbs the clip instead of real content.
+  // Two things here are deliberate. The leading "Hi there" is disposable padding:
+  // the first ~300ms of audio is clipped on some carrier paths and it ate
+  // "What's" on 2 of 4 test calls, so a throwaway greeting absorbs the clip
+  // instead of real content. And this string is spoken verbatim — authoring
+  // notes pasted in here get read out loud, which happened once with a block of
+  // seasonal variants the caller heard in full.
   firstMessage:
-    "Hi there — thanks for calling Summit Air. This is Casey, I'm an AI assistant and this call may be recorded. What's going on with your system today?",
+    "Hi there — thanks for calling Summit Air, this is Casey. Quick heads up, I'm an AI assistant and this call is recorded. What's the system doing, or not doing?",
 
   model: {
     provider: "mistral",
@@ -42,7 +45,12 @@ const assistant = {
     // it returns 403 tier_not_allowed, which Vapi surfaces only as the opaque
     // "pipeline-error-mistral-llm-failed". Verified working: small, medium.
     model: process.env.VAPI_MODEL ?? "mistral-medium-latest",
-    temperature: 0.4,
+    // Lowered from 0.4 after the model emitted its tool call as spoken text on
+    // a live call ("Tool calls. ID, four h two y y nine b j. Type, function...").
+    // A prompt rule forbids it, but that is an instruction the model can ignore,
+    // so this reduces the sampling that produced it. If it recurs, the next
+    // levers are mistral-small-latest or magistral-medium-latest.
+    temperature: 0.2,
     maxTokens: 300,
     messages: [{ role: "system", content: systemPrompt() }],
     tools: TOOL_LIST.map((t) => ({
