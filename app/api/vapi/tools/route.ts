@@ -6,19 +6,19 @@
  *
  * Verify both against https://docs.vapi.ai if a call fails with a tool error.
  */
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { handlers } from "../../../../agent/tools/handlers";
 import { safetyBackstop } from "../../../../agent/tools/guard";
-import {
-  callerPhoneFromPayload,
-  fetchCallerPhone,
-  phoneDigits,
-} from "../../../../agent/tools/callerId";
+import { callerPhoneFromPayload, fetchCallerPhone } from "../callerIdentity";
+import { phoneKey } from "../../../../agent/tools/handlers/repository";
 import {
   BLOCKED_AFTER_ESCALATION,
   hasEscalated,
   markEscalated,
   setCallerPhone,
+  callerIdAttempted,
+  markCallerIdResolved,
   get as getCallState,
   recordToolCall,
 } from "../../../../agent/tools/callState";
@@ -71,18 +71,27 @@ export async function POST(req: Request) {
   // The carrier establishes who is calling — not the model. On a live call the
   // model invented `phone: "unknown"`, which matched a real customer and leaked
   // their name, address and gate code to a stranger.
-  const callId = body.message?.call?.id ?? "unknown-call";
+  // Per-call state is keyed on Vapi's call id. When it is absent, this request
+  // gets its own key rather than a shared literal: two id-less webhooks sharing
+  // one key meant the first caller's number was served to the second, so
+  // lookup_customer could disclose one caller's address to another and a
+  // callback could be saved under the wrong phone.
+  const vapiCallId = body.message?.call?.id;
+  const callId = vapiCallId ?? `anon-${randomUUID()}`;
+  if (!vapiCallId) {
+    console.warn(JSON.stringify({ evt: "call_id_missing", note: "state isolated to this request" }));
+  }
 
   // The tool payload does not always carry the caller number where the
-  // end-of-call payload does, so try every shape and then ask Vapi directly.
-  // Resolved once per call and cached in callState.
-  let callerPhone = getCallState(callId).callerPhone;
-  if (!callerPhone) {
-    callerPhone = callerPhoneFromPayload(body.message) ?? (await fetchCallerPhone(callId));
-    setCallerPhone(callId, callerPhone);
-    if (!callerPhone) {
-      console.warn(JSON.stringify({ evt: "caller_id_unresolved", callId }));
-    }
+  // end-of-call payload does, so try every shape, then ask Vapi. The attempt is
+  // cached whether or not it succeeded — otherwise a call with no number retries
+  // the remote lookup on every tool webhook and adds seconds to a live call.
+  if (!getCallState(callId).callerPhone && !callerIdAttempted(callId)) {
+    const resolved =
+      callerPhoneFromPayload(body.message) ??
+      (vapiCallId ? await fetchCallerPhone(vapiCallId) : undefined);
+    markCallerIdResolved(callId, resolved);
+    if (!resolved) console.warn(JSON.stringify({ evt: "caller_id_unresolved", callId }));
   }
 
   const results = await Promise.all(
@@ -103,7 +112,7 @@ export async function POST(req: Request) {
       // refuse the tool rather than write a dead lead.
       if (name === "save_callback_request") {
         const spoken = typeof args.phone === "string" ? args.phone : "";
-        const resolved = known ?? (phoneDigits(spoken).length >= 10 ? spoken : "");
+        const resolved = known ?? (phoneKey(spoken).length >= 10 ? spoken : "");
         if (!resolved) {
           console.warn(JSON.stringify({ evt: "callback_without_phone", callId }));
           return {

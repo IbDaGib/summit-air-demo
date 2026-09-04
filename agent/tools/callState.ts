@@ -20,6 +20,12 @@ type CallState = {
   callerPhone?: string;
   startedAt: number;
   /** Tier computed by policy during the call. Never re-derived afterwards. */
+  /**
+   * True once caller-ID resolution has been attempted, whether or not it found
+   * anything. Without this a call whose lookup fails retries the remote request
+   * on every tool webhook, adding seconds to a live conversation.
+   */
+  callerIdResolved?: boolean;
   priority?: string;
   facts?: Record<string, unknown>;
   outcome?: string;
@@ -47,6 +53,17 @@ export function get(callId: string): CallState {
 
 export function setCallerPhone(callId: string, phone?: string) {
   if (phone) get(callId).callerPhone = phone;
+}
+
+/** Record that resolution ran. Cached separately from the value it found. */
+export function markCallerIdResolved(callId: string, phone?: string) {
+  const s = get(callId);
+  s.callerIdResolved = true;
+  if (phone) s.callerPhone = phone;
+}
+
+export function callerIdAttempted(callId: string): boolean {
+  return Boolean(get(callId).callerIdResolved);
 }
 
 export function markEscalated(callId: string) {
