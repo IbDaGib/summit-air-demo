@@ -115,3 +115,12 @@ receives and returns structured `tool_calls` (`call_…` ids). Proven from `arti
 call 01a06d84 (request and response bodies). The right fix for Mistral is the custom LLM
 endpoint, where the message array is ours; until then, the deploy script verifies the live
 model after every deploy and refuses to report success on a mismatch.
+
+## Debugging caveat: the bot-side transcript drops words
+
+Vapi's `messages[].message` for `bot` turns is not the text that was spoken; it is a lossy
+transcript of the agent's own audio. Three calls logged the greeting as "Going on today?" while
+the caller heard "What's going on today?" in full. Do not debug word-level speech — clipped
+greetings, missing words, odd pauses — from that field. Use the recording, or the static
+`firstMessage`/`request-start` strings, which are what was actually sent to TTS. The "Hi there"
+padding on the greeting was added on the strength of that field and fixed nothing.

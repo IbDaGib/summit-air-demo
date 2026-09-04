@@ -22,17 +22,12 @@ const REQUEST_START: Record<string, string> = {
 export const assistant = {
   name: "Summit Air — inbound",
 
-  // Static so the phone answers instantly. An LLM-generated greeting leaves a
-  // second of dead air before the caller hears anything.
-  // Two things here are deliberate. The leading "Hi there" is disposable padding:
-  // the first ~300ms of audio is clipped on some carrier paths and it ate
-  // "What's" on 2 of 4 test calls, so a throwaway greeting absorbs the clip
-  // instead of real content. And this string is spoken verbatim — authoring
-  // notes pasted in here get read out loud, which happened once with a block of
-  // seasonal variants the caller heard in full.
-  // "Hi there" is disposable padding: the first ~300ms is clipped on some
-  // carrier paths and ate "What's" on two of four test calls, so the clip
-  // eats a greeting instead of content.
+  // "Hi there" is just a greeting. It was added as padding against a supposed
+  // ~300ms audio clip that "ate" words on early calls — but that evidence came
+  // from Vapi's transcript of the agent's own speech, which drops words the
+  // caller actually hears (a caller heard the full sentence while the log showed
+  // it truncated). There was no clip. Kept because it sounds fine, not because
+  // it fixes anything.
   firstMessage:
     "Hi there — thanks for calling Summit Air, this is Casey. I'm an AI and this call is recorded. What's going on today?",
 
@@ -75,7 +70,10 @@ export const assistant = {
   // choice. Too high and the agent feels slow; too low and it interrupts people
   // mid-sentence while they think about their address.
   startSpeakingPlan: { waitSeconds: 0.4 },
-  silenceTimeoutSeconds: 12,
+  // 20, not 12. An audit suggested 12; on its first live call it hung up on a real
+  // caller who was deciding between two offered windows. That pause is the
+  // normal shape of the moment the call exists for.
+  silenceTimeoutSeconds: 20,
   maxDurationSeconds: 420,
 
   // The caller must always be able to cut in.
