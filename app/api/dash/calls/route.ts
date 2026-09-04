@@ -10,23 +10,22 @@
 
 import { NextResponse } from "next/server";
 import { listCalls } from "../../../(dash)/_data/client";
+import { newerThan } from "./since";
 
 export const dynamic = "force-dynamic";
 
 /**
- * `?since=<ISO>` returns only calls that started after that instant, so the
- * global toaster gets a delta rather than diffing two fifty-row lists. Rows
- * appear here when the end-of-call report is written, which means a "new" call
- * already carries its outcome and priority — a toast can say "booked" or
- * "escalated" and be right.
+ * `?since=<ISO>` returns only calls entered after that instant, so the global
+ * toaster gets a delta rather than diffing two fifty-row lists. "Entered" is
+ * the end time, not the start time — see ./since.ts for why. Rows appear here
+ * when the end-of-call report is written, which means a "new" call already
+ * carries its outcome and priority — a toast can say "booked" or "escalated"
+ * and be right.
  */
 export async function GET(req: Request) {
   const since = new URL(req.url).searchParams.get("since");
   const all = await listCalls();
-  const calls =
-    since && !Number.isNaN(Date.parse(since))
-      ? all.filter((c) => Date.parse(c.startedAt) > Date.parse(since))
-      : all;
+  const calls = newerThan(all, since);
   return NextResponse.json(
     { calls, fetchedAt: new Date().toISOString() },
     { headers: { "cache-control": "no-store" } },
