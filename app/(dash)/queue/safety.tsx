@@ -7,20 +7,33 @@
  * heading rather than a shrug. Nothing here is styled as an error.
  */
 import { ShieldCheck } from "lucide-react";
+import type { Hazard } from "@/agent/policy/types";
 import type { SafetyIncidentRow } from "../_data/metrics";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPhone } from "./_format";
 import { Dash, HeadRow, Panel, Th, When } from "./cells";
 
-/** agent/policy/types.ts Hazard codes, as dispatch would say them. */
-const HAZARD_LABEL: Record<string, string> = {
+/**
+ * Hazard codes as dispatch would say them. Typed against the policy so a new
+ * hazard fails to compile here until it has a label; `none` never files an
+ * incident, so it has no row.
+ */
+type Incident = Exclude<Hazard, "none">;
+const HAZARD_LABEL: Record<Incident, string> = {
   gas_smell: "Gas smell",
   co_alarm: "CO alarm",
   smoke_or_burning: "Smoke / burning",
 };
 
-const hazardLabel = (code: string) => HAZARD_LABEL[code] ?? code.replace(/_/g, " ");
+const isIncident = (code: string): code is Incident => Object.hasOwn(HAZARD_LABEL, code);
+
+/**
+ * `hazard` is text in the database, so the lookup stays string-keyed: a code
+ * this file has not met — written by a newer policy — is still readable.
+ */
+const hazardLabel = (code: string) =>
+  isIncident(code) ? HAZARD_LABEL[code] : code.replace(/_/g, " ");
 
 export function Safety({ items, now }: { items: SafetyIncidentRow[]; now: Date }) {
   if (items.length === 0) {
