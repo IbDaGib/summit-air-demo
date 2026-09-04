@@ -34,10 +34,17 @@ export default function DashError({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <pre className="max-h-32 overflow-auto rounded bg-muted p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-            {error.message || "Unknown error"}
-            {error.digest ? `\n\ndigest: ${error.digest}` : ""}
-          </pre>
+          {/*
+            Next replaces server-component error messages with a generic
+            "Minified React error #441" string in production so nothing leaks.
+            error.message is therefore never informative here; the digest is the
+            key that matches the server log, so that is what gets shown.
+          */}
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {error.digest
+              ? <>Reference <span className="tabular-nums text-foreground">{error.digest}</span> — matches the server log.</>
+              : "No reference id was returned."}
+          </p>
           <div>
             <Button size="sm" onClick={reset}>
               Try again
