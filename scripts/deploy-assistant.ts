@@ -35,8 +35,11 @@ const assistant = {
   // instead of real content. And this string is spoken verbatim — authoring
   // notes pasted in here get read out loud, which happened once with a block of
   // seasonal variants the caller heard in full.
+  // "Hi there" is disposable padding: the first ~300ms is clipped on some
+  // carrier paths and ate "What's" on two of four test calls, so the clip
+  // eats a greeting instead of content.
   firstMessage:
-    "Hi there — thanks for calling Summit Air, this is Casey. Quick heads up, I'm an AI assistant and this call is recorded. What's the system doing, or not doing?",
+    "Hi there — thanks for calling Summit Air, this is Casey. I'm an AI and this call is recorded. What's going on today?",
 
   model: {
     provider: "mistral",
