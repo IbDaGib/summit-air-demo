@@ -35,8 +35,8 @@ export function createHandlers(deps: HandlerDeps): ToolHandlers {
 }
 
 /**
- * The instance the webhook uses. Constructing it is cheap — the Neon client is
- * created per query over HTTP, so nothing is opened until a tool is called.
+ * The instance the webhook uses. Constructing it is cheap — the Supabase client
+ * is lazy and no connection is opened until a tool is actually called.
  */
 export const handlers: ToolHandlers = createHandlers({
   repo: defaultRepository(),

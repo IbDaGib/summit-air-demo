@@ -10,7 +10,7 @@
  */
 import type { Hazard } from "../../policy/types";
 import type { EscalationResult, ToolHandlers } from "../schemas";
-import { type HandlerDeps, logEvent, logFailure, maskPhone } from "./deps";
+import { type HandlerDeps, logEvent, logFailure } from "./deps";
 
 type RealHazard = Exclude<Hazard, "none">;
 
@@ -53,16 +53,13 @@ export function escalateEmergency(deps: HandlerDeps): ToolHandlers["escalate_eme
       const saved = await deps.repo.recordSafetyIncident({ hazard, town, phone: callbackPhone });
       incidentId = saved.incidentId;
     } catch (error) {
-      // The number is masked to the last four digits: this line goes to the
-      // operational log drain, and Vapi already holds the carrier number
-      // against the call record if the incident has to be traced to a person.
       logFailure("safety_incident_unrecorded", {
         hazard,
         town,
-        callbackPhone: maskPhone(callbackPhone),
+        callbackPhone,
         incidentId,
         message: error instanceof Error ? error.message : String(error),
-        note: "Instructions were still read to the caller. Trace the full number via the Vapi call record.",
+        note: "Instructions were still read to the caller. Reconstruct this incident from the log.",
       });
     }
 

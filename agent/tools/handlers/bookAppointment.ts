@@ -2,28 +2,17 @@
  * book_appointment — the only handler that writes something the caller is told
  * to rely on, so it is the one that must never throw into the call.
  *
- * Four refusals, in order:
- *  1. a hazard described in the free text it was handed;
- *  2. a P0 slot id — an escalated call does not end in a booking;
- *  3. a town we do not cover;
- *  4. the database rejecting the overlap (SQLSTATE 23P01), which is not an
+ * Three refusals, in order:
+ *  1. a hazard described in the free text — a call that escalated never books;
+ *  2. a town we do not cover;
+ *  3. the database rejecting the overlap (SQLSTATE 23P01), which is not an
  *     error condition but the constraint doing its job.
- *
- * ON ESCALATION STATE (Greptile, PR #2): "escalation is terminal" is enforced
- * at the route boundary by agent/tools/callState.ts, which keys on Vapi's call
- * id and blocks find_slots and book_appointment outright once
- * escalate_emergency has fired. That is the right place for it — a tool handler
- * receives no call id and so cannot know. This handler deliberately does NOT
- * keep a second copy of that state; the two checks below are stateless
- * defence in depth for drivers that do not go through the route, such as the
- * eval harness.
  */
 import { scanForHazard } from "../../policy/safetyScan";
 import { resolveTown } from "../../policy/serviceArea";
 import type { BookingResult, ToolHandlers } from "../schemas";
-import { type HandlerDeps, logEvent, logFailure, maskPhone } from "./deps";
+import { type HandlerDeps, logEvent, logFailure } from "./deps";
 import { loadSlots } from "./findSlots";
-import { storedAccessNotes } from "./lookupCustomer";
 import { decodeSlotId } from "./scheduling";
 import { spokenWindow } from "./time";
 
@@ -31,11 +20,11 @@ export function bookAppointment(deps: HandlerDeps): ToolHandlers["book_appointme
   return async (args): Promise<BookingResult> => {
     try {
       // 1. Life safety outranks the booking, whatever the model decided.
-      // Stateless: it can only see the text of this call. The authoritative,
-      // stateful check lives in callState.ts at the route boundary.
+      // route.ts applies the same rule at the transport boundary; this repeats
+      // it so the eval harness and any future driver get it for free.
       const hazard = scanForHazard(`${args.issueSummary ?? ""}. ${args.accessNotes ?? ""}`);
       if (hazard !== "none") {
-        logFailure("booking_refused_hazard", { hazard, phone: maskPhone(args.phone) });
+        logFailure("booking_refused_hazard", { hazard, phone: args.phone });
         return {
           status: "error",
           message:
@@ -87,13 +76,6 @@ export function bookAppointment(deps: HandlerDeps): ToolHandlers["book_appointme
         };
       }
 
-      // lookup_customer withholds gate and lockbox notes from the model, so
-      // reattach them here: the technician needs them on the ticket even though
-      // the agent never saw them.
-      const onFile = args.accessNotes
-        ? undefined
-        : await storedAccessNotes(deps, args.phone, args.addressLine);
-
       const result = await deps.repo.createBooking({
         techId: slot.techId,
         customerName: args.customerName,
@@ -105,7 +87,7 @@ export function bookAppointment(deps: HandlerDeps): ToolHandlers["book_appointme
         endsAt: slot.endsAt,
         priority: slot.priority,
         issueSummary: args.issueSummary,
-        accessNotes: args.accessNotes ?? onFile,
+        accessNotes: args.accessNotes,
       });
 
       if (result.status === "conflict") {

@@ -29,28 +29,13 @@ const NEGATION =
   /\b(?:no|not|nothing|none|never|without|isn'?t|wasn'?t|aren'?t|weren'?t|don'?t|doesn'?t|didn'?t|can'?t|cannot|couldn'?t)\b[^.,;]{0,32}$/i;
 
 /**
- * Negation words that are not denying the hazard, and so must not suppress it.
- * Both families are blanked out of the text before negation is considered.
- *
- * The complaint family: "no heat" is what the caller is ringing about, and it is
- * the single most common phrase on these calls. Without it, "no heat, and
- * there's a gas smell in the basement" reads as a negated gas smell and the
- * backstop stays silent on the exact sentence it exists for.
- *
- * The hedge family: "I have no idea why it smells like gas" is a gas smell
- * being reported by someone who cannot explain it, not a denial. Greptile
- * flagged this on PR #2; the transport backstop in agent/tools/guard.ts still
- * suppresses it, which is main's to fix.
- *
- * Deliberately excluded: "no sign of", "no smell of", "can't smell". Those do
- * negate the hazard, and blanking them would evacuate a caller who just told us
- * there is nothing wrong.
+ * "No heat" is a complaint, not a denial — and it is the single most common
+ * phrase on these calls. Without this, "no heat, and there's a gas smell in the
+ * basement" reads as a negated gas smell and the backstop stays silent on the
+ * exact sentence it exists for.
  */
 const COMPLAINT_NOT_NEGATION =
-  /\b(?:no|not|isn'?t|aren'?t|won'?t|doesn'?t|don'?t|didn'?t|can'?t)\s+(?:heat|heating|cool(?:ing)?|cold\s+air|warm\s+air|hot\s+water|air(?:\s?flow)?|power|a\/?c|blower|fan|blowing|fir(?:e|ing)|kick(?:ing)?\s+on|turn(?:ing)?\s+on|start(?:ing)?|work(?:ing)?|runn?(?:ing)?)\b/gi;
-
-const HEDGE_NOT_NEGATION =
-  /\b(?:no|not|don'?t|doesn'?t|didn'?t|can'?t|cannot|couldn'?t|wouldn'?t)\s+(?:idea|clue|know(?:ing)?|tell(?:ing)?|certain|positive)\b/gi;
+  /\bno\s+(?:heat|heating|cool(?:ing)?|cold\s+air|warm\s+air|hot\s+water|air(?:\s?flow)?|power|a\/?c)\b/gi;
 
 /** A detector being serviced is not a detector going off. */
 const DEVICE = /\b(?:smoke|co|c\.o\.|carbon monoxide)\s+(?:alarm|detector|monitor)s?\b/i;
@@ -130,11 +115,7 @@ function clauses(utterance: string): string[] {
 }
 
 function negatedAt(clause: string, index: number): boolean {
-  const before = clause
-    .slice(0, index)
-    .replace(COMPLAINT_NOT_NEGATION, " ")
-    .replace(HEDGE_NOT_NEGATION, " ");
-  return NEGATION.test(before);
+  return NEGATION.test(clause.slice(0, index).replace(COMPLAINT_NOT_NEGATION, " "));
 }
 
 /**
