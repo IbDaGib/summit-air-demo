@@ -45,6 +45,10 @@ The model reports facts; `computePriority` returns the tier. Deterministic, unit
 
 Double-booking is rejected by the database, not merely guarded against in application code. Rejected Google Calendar OAuth: hours of plumbing, weaker correctness story.
 
+## Dashboard writes are a plain toggle
+
+Resolving a follow-up or callback sets a timestamp; un-resolving clears it. No actor, no reason, no audit row. The dashboard is behind one shared secret, so attribution would be theatre — there is no per-user identity to record. Reversible beats accountable here; if Summit Air wanted names on resolutions the fix is real auth first, not a free-text "who" box.
+
 ## Out of scope, deliberately
 
 - SMS/email confirmation — A2P 10DLC registration takes days
