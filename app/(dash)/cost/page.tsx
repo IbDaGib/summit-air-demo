@@ -28,7 +28,10 @@ export default async function CostPage() {
   const measured = summary.calls > 0;
   const initial: RoiInputs = {
     ...DEFAULT_ROI_INPUTS,
-    agentCostPerCallUsd: summary.avgPerCallUsd > 0 ? summary.avgPerCallUsd : FALLBACK_COST_PER_CALL_USD,
+    // Seeded at the precision the calculator displays (a tenth of a cent), so
+    // "600 calls × $0.104 / call" multiplies out to the figure shown beside it.
+    agentCostPerCallUsd:
+      summary.avgPerCallUsd > 0 ? Math.round(summary.avgPerCallUsd * 1000) / 1000 : FALLBACK_COST_PER_CALL_USD,
     afterHoursShare: afterHours.pct / 100,
   };
 
