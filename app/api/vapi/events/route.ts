@@ -3,6 +3,8 @@ import { extractCallSummary } from "../../../../agent/postcall/extract";
 import { persistCall } from "../../../../agent/postcall/store";
 import { hasDbConfig, query } from "../../../../db/neon";
 import { snapshot } from "../../../../agent/tools/callState";
+import { computePriority } from "../../../../agent/policy/priority";
+import type { Hazard } from "../../../../agent/policy/types";
 
 /**
  * Vapi server events. The one that matters is `end-of-call-report`: it carries
@@ -74,6 +76,29 @@ export async function POST(req: Request) {
     callbackSaved,
     endedReason: m.endedReason,
   };
+  // A hazard call never reaches assess_situation — escalation preempts intake,
+  // which is exactly what the prompt demands — so nothing ever wrote a tier and
+  // the one genuine emergency of the day showed as "untiered" on the dispatch
+  // board. The tier comes from the same computePriority every other call uses,
+  // fed the hazard the escalation tool was actually given: one definition of P0,
+  // not two.
+  const escalation = trace.find((e) => e.name === "escalate_emergency");
+  const escalatedHazard = (escalation?.args as { hazard?: Hazard } | undefined)?.hazard;
+  const hazardPriority =
+    facts.escalated && !state?.priority
+      ? computePriority(
+          {
+            propertyType: "residential",
+            issue: "other",
+            systemDown: false,
+            hazard: escalatedHazard ?? "gas_smell",
+            vulnerableOccupant: false,
+            town: (state?.facts?.town as string) ?? undefined,
+          },
+          ended ?? new Date(),
+        )
+      : null;
+
   const derivedOutcome =
     state?.outcome ??
     (facts.escalated ? "escalated" : bookingConfirmed ? "booked" : callbackSaved ? "callback" : undefined);
@@ -99,10 +124,10 @@ export async function POST(req: Request) {
       started && ended ? Math.round((ended.getTime() - started.getTime()) / 1000) : undefined,
     cost_usd: m.cost,
     // Computed by policy during the call. Not re-derived from the transcript.
-    priority: state?.priority,
+    priority: state?.priority ?? hazardPriority?.tier,
     // Persisted whole so the ticket can show *why* the tier was assigned. Rows
     // before this change have null here; the detail page says so honestly.
-    priority_result: state?.priorityResult,
+    priority_result: state?.priorityResult ?? hazardPriority ?? undefined,
     outcome: derivedOutcome,
     facts: state?.facts,
     // The town the caller named on THIS call, not the one on their customer
