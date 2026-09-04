@@ -5,10 +5,10 @@
  * so scheduling behaviour is testable at a fixed instant, and so an eval can
  * replay a January scenario in September without touching the system time.
  */
-import { createClient } from "@supabase/supabase-js";
+import { hasDbConfig } from "../../../db/neon";
 import { createInMemoryRepository } from "./memoryRepository";
+import { createNeonRepository } from "./neonRepository";
 import type { DispatchRepository } from "./repository";
-import { createSupabaseRepository } from "./supabaseRepository";
 
 export interface HandlerDeps {
   repo: DispatchRepository;
@@ -45,31 +45,25 @@ export function logFailure(event: string, fields: Record<string, unknown>): void
 let cached: DispatchRepository | null = null;
 
 /**
- * Supabase when it is configured, fixtures when it is not.
+ * Postgres when it is configured, fixtures when it is not.
  *
  * Falling back rather than throwing is deliberate: a missing environment
  * variable should not be the reason a caller with no heat hears dead air. The
  * warning is loud so a fallback in production is obvious in the logs.
- *
- * Once Workspace A lands db/client.ts, this becomes `return supabaseRepository(db)`.
  */
 export function defaultRepository(): DispatchRepository {
   if (cached) return cached;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !key) {
+  if (!hasDbConfig()) {
     logFailure("repository_fallback", {
-      reason: "NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is unset",
+      reason: "DATABASE_URL is unset",
       using: "in-memory fixtures",
     });
     cached = createInMemoryRepository();
     return cached;
   }
 
-  cached = createSupabaseRepository(
-    createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } }),
-  );
+  cached = createNeonRepository();
   return cached;
 }
 

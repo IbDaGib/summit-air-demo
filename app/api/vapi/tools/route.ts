@@ -15,6 +15,7 @@ import {
   markEscalated,
   setCallerPhone,
   get as getCallState,
+  recordToolCall,
 } from "../../../../agent/tools/callState";
 import type { ToolHandlers } from "../../../../agent/tools/schemas";
 
@@ -110,6 +111,13 @@ export async function POST(req: Request) {
           : await fn(args);
 
         if (forced || name === "escalate_emergency") markEscalated(callId);
+        recordToolCall(callId, {
+          name,
+          args,
+          result,
+          ms: Date.now() - started,
+          forced: Boolean(forced),
+        });
 
         console.log(
           JSON.stringify({
