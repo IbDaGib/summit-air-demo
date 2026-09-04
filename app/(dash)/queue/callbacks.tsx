@@ -9,7 +9,7 @@ import { PhoneOff } from "lucide-react";
 import type { CallbackItem } from "../_data/metrics";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { formatPhone } from "./_format";
+import { formatPhone, present } from "./_format";
 import { Dash, Empty, HeadRow, Panel, Th, When } from "./cells";
 
 export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) {
@@ -49,7 +49,7 @@ export function Callbacks({ items, now }: { items: CallbackItem[]; now: Date }) 
               </TableCell>
               <TableCell className="max-w-[32ch] whitespace-normal">{c.reason}</TableCell>
               <TableCell className="max-w-[40ch] whitespace-normal text-muted-foreground">
-                {c.notes ? <span className="line-clamp-2">{c.notes}</span> : <Dash />}
+                {present(c.notes) ? <span className="line-clamp-2">{c.notes}</span> : <Dash />}
               </TableCell>
               <TableCell className="pr-4">
                 {c.resolved ? (

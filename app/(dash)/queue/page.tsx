@@ -36,7 +36,10 @@ export default async function QueuePage() {
   const now = new Date();
   const shownCallbacks = callbacks.slice(0, LIMIT);
   // Counted over the rows on screen, so the badge and the table agree.
-  const openCallbacks = shownCallbacks.filter((c) => !c.resolved).length;
+  // Count over the unsliced fetch: metrics orders unresolved first, so ≤50 open is
+  // exact and ≥51 reads 50+. Counting the sliced list capped it at 50 — the bug
+  // this whole change exists to remove.
+  const openCallbacks = callbacks.filter((c) => !c.resolved).length;
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-5">
