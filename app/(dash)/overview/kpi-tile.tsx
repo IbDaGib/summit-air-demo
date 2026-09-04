@@ -42,6 +42,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /**
  * The six numbers, in the order a stakeholder asks about them: how many calls,
  * what came of them, when they arrived, what they cost.
+ *
+ * The page passes every metric the same 30-day range, but each metric is its
+ * own query, so a call inserted between two of them can be counted by one tile
+ * and not another — the Booked count and the Cost per booking footnote's
+ * `volume.booked` come from `getCallVolume`, its value from `getCostSummary`.
+ * Accepted: the skew is one call, for one refresh.
  */
 export function KpiTiles({
   volume,

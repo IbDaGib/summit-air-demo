@@ -21,6 +21,7 @@ import {
   getDailySeries,
   getPriorityMix,
   getTownBreakdown,
+  last30Days,
   type CallVolume,
   type TownRow,
 } from "../_data/metrics";
@@ -48,15 +49,19 @@ export default async function OverviewPage() {
     from: denverInstant(-(SERIES_DAYS - 1), 0, now),
     to: denverInstant(1, 0, now),
   };
+  // One window, built once, for every tile. Each metric defaults to
+  // last30Days() — a fresh new Date() per call — so without this the six
+  // numbers would each describe a window a few milliseconds apart.
+  const range = last30Days(now);
 
   const [volume, chartVolume, mix, afterHours, cost, series, towns] = await Promise.all([
-    getCallVolume(),
+    getCallVolume(range),
     getCallVolume(chartRange),
-    getPriorityMix(),
-    getAfterHoursShare(),
-    getCostSummary(),
+    getPriorityMix(range),
+    getAfterHoursShare(range),
+    getCostSummary(range),
     getDailySeries(SERIES_DAYS),
-    getTownBreakdown(),
+    getTownBreakdown(range),
   ]);
 
   return (
