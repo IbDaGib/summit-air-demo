@@ -51,9 +51,31 @@ Write for a dispatcher reading twenty of these on a Monday morning. Be specific 
   the caller asked for a person, if they were upset, or if nothing was booked
   when something should have been.
 
-Never invent details. If the transcript does not say it, leave it out.`;
+Never invent details. If the transcript does not say it, leave it out.
 
-export async function extractCallSummary(transcript: string): Promise<CallSummary | null> {
+The RECORDED FACTS block is the system's own record of what its tools did. It is
+authoritative over anything the transcript seems to imply. An offer of arrival
+windows is not a booking; "which works better?" with no answer is not a booking.
+If bookingConfirmed is false, the summary must not say booked, scheduled, or
+confirmed — say what was offered and that the call ended without a booking.`;
+
+/**
+ * What the system actually recorded during the call. The extractor must not
+ * contradict this: on a real call the agent OFFERED two windows, the caller went
+ * quiet, and the summary said "Booked for Tuesday". Nothing was booked.
+ */
+export interface RecordedFacts {
+  bookingConfirmed: boolean;
+  escalated: boolean;
+  callbackSaved: boolean;
+  /** How the call ended per Vapi, e.g. customer-ended-call, silence-timed-out. */
+  endedReason?: string;
+}
+
+export async function extractCallSummary(
+  transcript: string,
+  facts?: RecordedFacts,
+): Promise<CallSummary | null> {
   const key = process.env.MISTRAL_API_KEY;
   if (!key || !transcript.trim()) return null;
 
@@ -65,7 +87,17 @@ export async function extractCallSummary(transcript: string): Promise<CallSummar
       max_tokens: 700,
       messages: [
         { role: "system", content: SYSTEM },
-        { role: "user", content: transcript.slice(0, 24_000) },
+        {
+          role: "user",
+          content:
+            (facts
+              ? `RECORDED FACTS (authoritative):\n` +
+                `- bookingConfirmed: ${facts.bookingConfirmed}\n` +
+                `- escalated: ${facts.escalated}\n` +
+                `- callbackSaved: ${facts.callbackSaved}\n` +
+                `- endedReason: ${facts.endedReason ?? "unknown"}\n\nTRANSCRIPT:\n`
+              : "") + transcript.slice(0, 24_000),
+        },
       ],
       response_format: {
         type: "json_schema",

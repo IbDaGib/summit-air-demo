@@ -59,11 +59,30 @@ export async function POST(req: Request) {
   const started = m.startedAt ? new Date(m.startedAt) : undefined;
   const ended = m.endedAt ? new Date(m.endedAt) : undefined;
 
+  // Ground truth from the tools, not from prose. A call that drops before
+  // record_call_outcome fires still has a trace that says whether a booking
+  // was confirmed — so outcome is no longer null just because the caller went
+  // quiet at the wrong moment.
+  const trace = state?.trace ?? [];
+  const bookingConfirmed = trace.some(
+    (e) => e.name === "book_appointment" && (e.result as { status?: string } | null)?.status === "confirmed",
+  );
+  const callbackSaved = trace.some((e) => e.name === "save_callback_request");
+  const facts = {
+    bookingConfirmed,
+    escalated: Boolean(state?.escalated),
+    callbackSaved,
+    endedReason: m.endedReason,
+  };
+  const derivedOutcome =
+    state?.outcome ??
+    (facts.escalated ? "escalated" : bookingConfirmed ? "booked" : callbackSaved ? "callback" : undefined);
+
   // Extraction can fail — a missing key, a refusal, a parse error. The ticket
   // has to survive that, so the transcript is written either way.
   let summary = null;
   try {
-    summary = await extractCallSummary(transcript);
+    summary = await extractCallSummary(transcript, facts);
   } catch (err) {
     console.error(
       JSON.stringify({ evt: "extract_threw", callId, err: String(err).slice(0, 200) }),
@@ -84,7 +103,7 @@ export async function POST(req: Request) {
     // Persisted whole so the ticket can show *why* the tier was assigned. Rows
     // before this change have null here; the detail page says so honestly.
     priority_result: state?.priorityResult,
-    outcome: state?.outcome ?? (state?.escalated ? "escalated" : undefined),
+    outcome: derivedOutcome,
     facts: state?.facts,
     // The town the caller named on THIS call, not the one on their customer
     // record — a landlord calls about a different property than their own.
