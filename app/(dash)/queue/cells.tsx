@@ -2,9 +2,12 @@
  * The small pieces the three queue tables share, so a change to how a
  * timestamp or an empty state looks lands in one place.
  *
- * All server components. The Tooltip primitives are client components under
- * the hood, but rendering them from here only ships their own JavaScript —
- * the table rows stay on the server.
+ * No "use client" here, but not everything below is a server component. `Th`
+ * is a re-export of TableHead from components/ui/table, a client module, so
+ * it carries that module's JavaScript. `When` renders a Radix Tooltip, which
+ * only works under the TooltipProvider that app/(dash)/layout.tsx mounts —
+ * used outside the dashboard layout it throws. The rows around them stay on
+ * the server.
  */
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";

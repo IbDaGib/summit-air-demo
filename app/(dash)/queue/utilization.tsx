@@ -59,11 +59,8 @@ function TechRow({ tech }: { tech: TechUtilization }) {
         aria-valuenow={Math.min(tech.bookedWindows, tech.capacityWindows)}
       >
         <span
-          className="block h-full rounded"
-          style={{
-            width: `${pct}%`,
-            background: overbooked ? "var(--destructive)" : "var(--chart-2)",
-          }}
+          className={`block h-full rounded ${overbooked ? "bg-destructive" : "bg-chart-2"}`}
+          style={{ width: `${pct}%` }}
         />
       </span>
       <span className="font-mono text-xs tabular-nums text-muted-foreground">
