@@ -27,6 +27,10 @@ type CallState = {
    */
   callerIdResolved?: boolean;
   priority?: string;
+  /** The whole PriorityResult — tier plus the reason the ticket shows. */
+  priorityResult?: Record<string, unknown>;
+  /** From check_service_area, so the ticket carries the county without a second lookup. */
+  county?: string;
   facts?: Record<string, unknown>;
   outcome?: string;
   /** Every tool call, for the dashboard trace and for live debugging. */
@@ -87,8 +91,15 @@ export function recordToolCall(
   // deliberately does not re-derive it from prose.
   if (entry.name === "assess_situation") {
     const r = entry.result as { tier?: string } | null;
-    if (r?.tier) s.priority = r.tier;
+    if (r?.tier) {
+      s.priority = r.tier;
+      s.priorityResult = r as Record<string, unknown>;
+    }
     s.facts = entry.args as Record<string, unknown>;
+  }
+  if (entry.name === "check_service_area") {
+    const r = entry.result as { covered?: boolean; county?: string } | null;
+    if (r?.covered && r.county) s.county = r.county;
   }
   if (entry.name === "end_call") {
     const a = entry.args as { outcome?: string };

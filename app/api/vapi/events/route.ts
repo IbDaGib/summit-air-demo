@@ -81,11 +81,15 @@ export async function POST(req: Request) {
     cost_usd: m.cost,
     // Computed by policy during the call. Not re-derived from the transcript.
     priority: state?.priority,
+    // Persisted whole so the ticket can show *why* the tier was assigned. Rows
+    // before this change have null here; the detail page says so honestly.
+    priority_result: state?.priorityResult,
     outcome: state?.outcome ?? (state?.escalated ? "escalated" : undefined),
     facts: state?.facts,
     // The town the caller named on THIS call, not the one on their customer
     // record — a landlord calls about a different property than their own.
     town: (state?.facts?.town as string) ?? undefined,
+    county: state?.county,
     transcript,
     summary: summary?.summary,
     sentiment: summary?.sentiment,
