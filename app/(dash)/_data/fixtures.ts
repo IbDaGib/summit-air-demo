@@ -342,7 +342,7 @@ export const CALLS: CallDetail[] = [
           isMaintenanceMember: true,
           vulnerableOccupant: false,
           accessNotes: "Gate code 4412, dog in the yard",
-          lastServiceAt: "2026-03-14",
+          lastServiceAt: "2026-03-14T00:00:00-06:00",
         },
       },
       {
@@ -766,7 +766,7 @@ export const CALLS: CallDetail[] = [
           county: "Gallatin",
           isMaintenanceMember: true,
           vulnerableOccupant: false,
-          lastServiceAt: "2026-04-02",
+          lastServiceAt: "2026-04-02T00:00:00-06:00",
         },
       },
       {

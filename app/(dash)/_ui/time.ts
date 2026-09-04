@@ -100,6 +100,14 @@ export function denverOffsetMinutes(at: Date): number {
 export function denverInstant(dayOffset: number, hour: number, from: Date = new Date()): Date {
   const shifted = new Date(from.getTime() + dayOffset * 86_400_000);
   const day = denverDayKey(shifted);
-  const guess = new Date(`${day}T${String(hour).padStart(2, "0")}:00:00Z`);
-  return new Date(guess.getTime() - denverOffsetMinutes(guess) * 60_000);
+  const wallAsUtc = new Date(`${day}T${String(hour).padStart(2, "0")}:00:00Z`).getTime();
+
+  // Two passes, because the offset has to be resolved at the *target* instant.
+  // Reading it from the wall-time-as-UTC guess puts it on the wrong side of a
+  // DST transition — an 8:00 window on Denver's spring-forward date rendered as
+  // 9:00. The first pass lands near the answer, the second resolves the offset
+  // there and corrects it. Converges for every real zone.
+  const first = wallAsUtc - denverOffsetMinutes(new Date(wallAsUtc)) * 60_000;
+  const second = wallAsUtc - denverOffsetMinutes(new Date(first)) * 60_000;
+  return new Date(second);
 }
