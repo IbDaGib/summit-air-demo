@@ -24,7 +24,7 @@ export interface RoiInputs {
   avgInstallUsd: number;
   /** Seeded from getCostSummary().avgPerCallUsd; the page falls back to $0.10. */
   agentCostPerCallUsd: number;
-  /** Seeded from getAfterHoursShare().pct / 100, 0–1. */
+  /** Display only — shown as a measured badge; not an input to computeRoi. */
   afterHoursShare: number;
 }
 
