@@ -108,5 +108,17 @@ function escapeHtml(s: string): string {
 }
 
 export const config = {
-  matcher: ["/calls", "/calls/:path*", "/schedule", "/schedule/:path*", "/api/dash/:path*"],
+  // Every dashboard route, listed explicitly. When a route is added under
+  // app/(dash)/ it must be added here too — /overview, /cost and /queue shipped
+  // unauthenticated for about an hour because they were not. An allowlist is
+  // deliberate over a catch-all: /api/vapi/* must stay open (it carries its own
+  // secret) and a regex mistake there would take the phone agent down.
+  matcher: [
+    "/calls", "/calls/:path*",
+    "/schedule", "/schedule/:path*",
+    "/overview", "/overview/:path*",
+    "/cost", "/cost/:path*",
+    "/queue", "/queue/:path*",
+    "/api/dash/:path*",
+  ],
 };
