@@ -78,3 +78,9 @@ Written as I built. Feeds the self-critique in the demo.
 - `error.tsx` at `app/(dash)/` catches page errors client-side; a plain HTTP fetch of a
   failing page still sees a 500 with the RSC payload, which is Next's design, not a gap.
   Verified in a real browser — see the commit that closes this line.
+- `getFollowupQueue` / `getCallbackQueue` / `getSafetyIncidents` take a `limit` but return no
+  total, so a queue page can only say "50+" once it hits the cap. The proper fix is an additive
+  `{ items, total }` return (or a companion count query). Found by the Workspace C quality review.
+- `/queue`'s `relativeTime` derives "yesterday" by subtracting 24h from the instant before taking
+  the Denver day key — the same fall-back-Sunday edge as `denverInstant`, one hour per year.
+  Fix is to subtract a calendar day from today's day key instead. Same review.
