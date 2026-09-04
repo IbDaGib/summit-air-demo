@@ -7,7 +7,8 @@ prioritised ticket.
 
 > **Summit Air here is the fictional company from the case study. All data is mock.**
 
-**Call it:** `+1 (603) 441-7065`
+**Call it:** `+1 (603) 441-7065` · **Demo runbook:** [`docs/demo-runbook.html`](docs/demo-runbook.html)
+— the session plan, a self-critique scorecard, and where to look when something breaks live.
 
 Try these three, in order:
 
@@ -26,7 +27,7 @@ flowchart TB
     Caller([caller]) -->|PSTN| Vapi[Vapi<br/>telephony · STT · TTS · VAD · barge-in]
     Vapi -->|tool calls| Tools["/api/vapi/tools"]
     Vapi -->|end-of-call-report| Events["/api/vapi/events"]
-    Vapi <-->|inference| Mistral[mistral-medium-latest]
+    Vapi <-->|inference| LLM[openai · gpt-5.6-luna]
 
     Tools --> Guard[guard.ts<br/>deterministic hazard scan]
     Tools --> State[callState.ts<br/>caller ID · escalation lock]
@@ -38,7 +39,7 @@ flowchart TB
 
     Events --> Extract[postcall/extract.ts<br/>magistral-medium-latest]
     Extract --> Neon
-    Neon --> Dash["/calls · /schedule"]
+    Neon --> Dash["dashboard · 6 routes"]
 
     Evals[evals/] -.->|same prompt, same tools, same guards| Handlers
 ```
@@ -98,7 +99,7 @@ assembled prompt rather than buried under conversational instructions.
 | `prompt/safety.ts` | Hard stops. Gas, CO, smoke, medical. No firm prices. No injection compliance. |
 | `prompt/identity.ts` | Casey — a warm dispatcher, explicitly *not* a salesperson. Discloses AI + recording. |
 | `prompt/objectives.ts` | Required fields, tool order, and the rule that a failed tool never becomes a fake booking. |
-| `prompt/style.ts` | Two sentences per turn. One question. Numbers as words. Read the address back. |
+| `prompt/style.ts` | Two sentences per turn. One question. Numbers as words. Read the address back. Never speak a tool call. One filler phrase per call. Record the outcome, *then* hang up. |
 
 Two deliberate choices:
 
@@ -119,7 +120,7 @@ outdoor temperature. This demo runs in September and the canonical scenario is J
 |---|---|---|---|
 | Voice pipeline | **Vapi** | Buys VAD, endpointing, barge-in, turn-taking — the commodity layer | LiveKit/Pipecat + Twilio SIP: better control, 2–3 days owning interruption handling |
 | Agent config | **Vapi native model config** | Prompt and tools live in the repo, pushed by `scripts/deploy-assistant.ts` | Custom LLM endpoint: full request-body control, but unbounded SSE risk on a one-day build |
-| Call model | **`mistral-medium-latest`** | Verified tier-available and tool-calling correct on the safety cases | `mistral-large-latest` returns 403 `tier_not_allowed` |
+| Call model | **`openai / gpt-5.6-luna`** | Chosen on measured call quality: Mistral Medium read its own tool call aloud on a live call and the caller hung up | `mistral-medium-latest` — verified working, still a one-env-var swap, and the self-hosting path; `mistral-large-latest` returns 403 `tier_not_allowed` |
 | Offline model | **`magistral-medium-latest`** | Reasoning model for extraction and the eval judge | Same model as the caller — a judge shouldn't be the model it scores |
 | Data | **Neon Postgres** | Transactions, `btree_gist`, exclusion constraints | Supabase — outaged mid-build; the migration moved unchanged |
 | Scheduling | **`EXCLUDE USING gist`** | The database refuses double-booking | Google Calendar OAuth; app-level checks that race |
@@ -127,10 +128,18 @@ outdoor temperature. This demo runs in September and the canonical scenario is J
 
 **Config lives in the repo, not the dashboard.** `scripts/deploy-assistant.ts` pushes the
 prompt, all eight tool schemas, the model, the voice, endpointing, and `serverMessages`. The
-only thing ever set by hand is the Mistral provider credential. This matters more than it
+only thing ever set by hand is the model provider credential. This matters more than it
 sounds: a hand-edit to the Vapi dashboard mid-build set the events URL to a bare origin,
 cleared `serverMessages`, and left the eight tool URLs pointing at a laptop tunnel — a demo
 that works until the laptop sleeps. Redeploying from the repo fixed all three at once.
+
+Drift bit once more, and worse. A tool rename — splitting "record the outcome" from "hang up",
+because the model was conflating them and saying goodbye three times — was applied to the
+working tree and deployed, but only the prompt half reached a commit. For two hours the live
+agent called `record_call_outcome` and the webhook answered `unknown tool`, so every call
+silently failed to record its outcome. Found it in a tool trace, not in a test. The lesson
+isn't "be careful"; it's that the deploy script has to be the only path to the assistant, and
+a deploy from an uncommitted tree is a bug even when it works.
 
 ---
 
@@ -161,6 +170,8 @@ Built as four parallel workspaces against that metrics contract
 (`docs/plans/2026-09-04-shadcn-dashboard.md`), each spec-reviewed and quality-reviewed before merge;
 the review findings that changed the design are in the commit history and `KNOWN_ISSUES.md`.
 
+---
+
 ## Evals
 
 Five scenarios — gas smell, no-heat-plus-elderly, routine maintenance, out-of-area,
@@ -185,14 +196,18 @@ npx vitest run evals
 
 Measured on real calls, not estimated:
 
-| Component | Per 4-minute call |
-|---|---|
-| Vapi platform + STT + TTS + telephony | ~$0.33 |
-| `mistral-medium-latest` (1,303 prompt tokens/turn) | ~$0.05 |
-| Post-call extraction (~400 in / 70 out) | ~$0.01 |
-| **Total** | **~$0.38** |
+Aggregate across every real call placed to this number:
 
-A 92-second call cost **$0.1456** end to end — about **$0.095/min**.
+| | |
+|---|---|
+| Calls | 10 |
+| Average duration | 92 s |
+| **Cost per call** | **$0.118** |
+| **Cost per minute** | **$0.077** |
+| Cost per booking | $0.163 |
+
+Split, per call: platform + telephony + STT + TTS ≈ 70%, the language model
+≈ 15%, post-call extraction (~400 in / 70 out) under 1%.
 
 The useful shape of that: **the LLM is roughly 15% of the bill.** Voice synthesis and the
 platform fee are ~70%. If Summit Air asked to cut cost, the answer is a different TTS
@@ -235,6 +250,19 @@ Honest list. See `KNOWN_ISSUES.md` for the rest.
   I'd change.
 - **No weather source.** `outdoorTempF` has no supplier, so the freezing-pipes branch of the
   priority policy only fires when `DEMO_FORCE_OUTDOOR_TEMP_F` is set.
+- **Two prompt rules don't hold.** The prompt forbids stacked filler and spoken digits. A real
+  call still produced eight filler phrases and said "3 Forks" for Three Forks. The rules are
+  live and the model ignores them — prompt instruction alone isn't enough here, and the fix is
+  a post-processing guard on the spoken text, not more prompt.
+- **The eval suite has never run against the real model.** Five scenarios, hard assertions
+  gating and a judge trending, all green — offline, against a deterministic stand-in. That
+  proves the harness, not the prompt. What I actually know about this agent's behaviour came
+  from about a dozen phone calls, which found five real bugs.
+- **Addresses aren't normalised.** "fourteen twenty Durston Road" is transcribed and stored as
+  `14 20 Durston Road`. A technician can read it; it wouldn't geocode.
+- **`priority_result` is null on calls recorded before 2026-09-04.** The webhook stored only
+  the tier, so those tickets show the tier without its reason. The detail page says so rather
+  than implying no tier was assigned.
 - **Per-call state is in-memory**, so it does not survive a serverless cold start. Adequate
   for one call, which is its whole lifetime; it belongs in the `calls` row.
 - **No SMS confirmation.** A2P 10DLC registration takes days.
@@ -255,11 +283,11 @@ npx tsx --env-file=.env.local db/seed.ts                     # 6 techs, 14 custo
 npx tsx --env-file=.env.local scripts/deploy-assistant.ts    # push config to Vapi
 
 npm run dev
-npx vitest run                       # 173 tests
+npx vitest run                       # 463 tests
 ```
 
-Dashboard is at `/calls`, `/calls/[id]` (transcript + tool trace) and `/schedule`, behind a
-shared secret in `DASH_SECRET`.
+Every dashboard route sits behind `DASH_SECRET` — open one with `?key=…` once and a 12-hour
+cookie is set. See [Dashboard](#dashboard) for the six routes.
 
 ---
 
