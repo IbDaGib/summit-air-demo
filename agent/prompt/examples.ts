@@ -1,4 +1,17 @@
 /**
+ * NOT COMPOSED INTO THE PROMPT. Kept as the record of a failed experiment.
+ *
+ * Added on the audit's recommendation and reverted after one call: the model
+ * imitated the `Tool Call:` lines as spoken output and read tool-call JSON to
+ * the caller — "Tool calls, w w j q k x q j three. Type, function. Name, assess
+ * situation. Arguments. Property type residential..." — which is the precise
+ * failure the examples were meant to prevent.
+ *
+ * If examples are tried again, the tool-call lines must not look like a
+ * transcript the model can speak: describe the call in prose ("you check the
+ * service area"), or move the examples into the tool descriptions where they
+ * are never adjacent to spoken text.
+ *
  * Three worked calls: the happy path, the hard stop, and a tool failure.
  *
  * These exist because rules alone did not hold. Every defect a real call

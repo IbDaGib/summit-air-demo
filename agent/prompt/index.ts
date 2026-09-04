@@ -1,5 +1,4 @@
 import { CONTEXT } from "./context";
-import { EXAMPLES } from "./examples";
 import { IDENTITY } from "./identity";
 import { SAFETY } from "./safety";
 import { OBJECTIVES } from "./objectives";
@@ -22,7 +21,7 @@ export interface CallContext {
 
 /** The static system prompt. This is what deploy-assistant.ts pushes to Vapi. */
 export function systemPrompt(): string {
-  return [SAFETY, IDENTITY, CONTEXT, OBJECTIVES, STYLE, EXAMPLES].join("\n\n");
+  return [SAFETY, IDENTITY, CONTEXT, OBJECTIVES, STYLE].join("\n\n");
 }
 
 const MOUNTAIN = "America/Denver";
