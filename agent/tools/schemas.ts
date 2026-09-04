@@ -150,10 +150,10 @@ export const TOOL_SCHEMAS: Record<string, ToolSchema> = {
     ),
   },
 
-  end_call: {
-    name: "end_call",
+  record_call_outcome: {
+    name: "record_call_outcome",
     description:
-      "End the call. Call this after you have confirmed a booking, completed an escalation, or logged a callback request and said goodbye.",
+      "Record how this call ended, for the dispatch ticket. This does NOT hang up — it only writes the outcome. Call it once you have confirmed a booking, completed an escalation, or logged a callback, and then use the separate endCall function to actually end the call. Never call this twice.",
     parameters: obj(
       { outcome: { type: "string", enum: ["booked", "escalated", "callback", "no_action"] } },
       ["outcome"],
@@ -245,5 +245,5 @@ export interface ToolHandlers {
     reason: string;
     notes?: string;
   }): Promise<{ status: "saved"; requestId: string }>;
-  end_call(a: { outcome: "booked" | "escalated" | "callback" | "no_action" }): Promise<{ ok: true }>;
+  record_call_outcome(a: { outcome: "booked" | "escalated" | "callback" | "no_action" }): Promise<{ ok: true }>;
 }

@@ -260,8 +260,8 @@ export const stubHandlers: ToolHandlers = {
     return { status: "saved", requestId };
   },
 
-  async end_call({ outcome }) {
-    console.log(JSON.stringify({ evt: "end_call", outcome }));
+  async record_call_outcome({ outcome }) {
+    console.log(JSON.stringify({ evt: "record_call_outcome", outcome }));
     return { ok: true };
   },
 };

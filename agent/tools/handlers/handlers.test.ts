@@ -339,11 +339,11 @@ describe("save_callback_request", () => {
   });
 });
 
-describe("end_call", () => {
+describe("record_call_outcome", () => {
   it("acknowledges every outcome", async () => {
     const h = createHandlers(deps(createInMemoryRepository()));
     for (const outcome of ["booked", "escalated", "callback", "no_action"] as const) {
-      expect(await h.end_call({ outcome })).toEqual({ ok: true });
+      expect(await h.record_call_outcome({ outcome })).toEqual({ ok: true });
     }
   });
 });

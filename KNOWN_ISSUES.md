@@ -64,3 +64,12 @@ Written as I built. Feeds the self-critique in the demo.
       every tier; a P1 on Labor Day gets the on-call pager via `responseTarget`
       rather than a bookable window. Defensible, but it is a choice, not a rule
       anyone asked for.
+
+## Address normalisation
+
+A caller saying "fourteen twenty Durston Road" is transcribed as "14 20 Durston
+Road" and stored that way. A technician can read it, but it is not clean data and
+it would not geocode. The fix is a normalisation pass on the address before it
+reaches book_appointment — collapse split house numbers, expand "St"/"Ave",
+title-case the street. Not built: it wants real address data to test against
+rather than guesses at 5am.

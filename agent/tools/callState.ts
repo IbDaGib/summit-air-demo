@@ -90,7 +90,7 @@ export function recordToolCall(
     if (r?.tier) s.priority = r.tier;
     s.facts = entry.args as Record<string, unknown>;
   }
-  if (entry.name === "end_call") {
+  if (entry.name === "record_call_outcome") {
     const a = entry.args as { outcome?: string };
     if (a?.outcome) s.outcome = a.outcome;
   }
